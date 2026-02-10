@@ -279,11 +279,12 @@ class App {
         var screenshot = page.getScreenshot(this.selectedScreenshotId);
         if (!screenshot) return;
 
+        var gap = 10;
         this.referencePoint = {
-            x: screenshot.x,
+            x: screenshot.x + screenshot.width + gap,
             y: screenshot.y,
             rowStartX: screenshot.x,
-            rowHeight: 0
+            rowHeight: screenshot.height + 30
         };
 
         this.toolbar.showReferenceStatus(true);
