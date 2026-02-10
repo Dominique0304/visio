@@ -197,11 +197,9 @@ body {
 
 #workspace {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     background-color: #2c2c2c;
-    display: flex;
-    justify-content: center;
-    padding: 20px;
+    position: relative;
     cursor: grab;
 }
 
@@ -210,8 +208,8 @@ body {
 }
 
 #page-container {
-    position: relative;
-    flex-shrink: 0;
+    position: absolute;
+    transform-origin: 0 0;
 }
 
 #page-canvas {
@@ -220,7 +218,6 @@ body {
     background-color: #e8e8e8;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
     position: relative;
-    transform-origin: top left;
     overflow: hidden;
 }
 
@@ -345,22 +342,3 @@ body {
     text-align: center;
 }
 
-/* ========== Scrollbar styling ========== */
-
-#workspace::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-#workspace::-webkit-scrollbar-track {
-    background: #2c2c2c;
-}
-
-#workspace::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 5px;
-}
-
-#workspace::-webkit-scrollbar-thumb:hover {
-    background: #777;
-}

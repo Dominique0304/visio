@@ -11,7 +11,10 @@ class App {
         this.dragManager = new DragManager(this._onDragEnd.bind(this));
 
         this.canvas = document.getElementById('page-canvas');
-        this.currentZoom = 50;
+        this.container = document.getElementById('page-container');
+        this.workspace = document.getElementById('workspace');
+
+        this.viewTransform = { x: 0, y: 0, scale: 0.5 };
         this.selectedScreenshotId = null;
         this.referencePoint = null;
 
@@ -25,6 +28,7 @@ class App {
         this._setupPan();
 
         this.newProject();
+        this._centerView();
     }
 
     _initTabBar() {
@@ -81,78 +85,64 @@ class App {
         }.bind(this));
     }
 
+    // --- Zoom molette centre sur le pointeur ---
+
     _setupWheelZoom() {
-        var workspace = document.getElementById('workspace');
         var self = this;
-        workspace.addEventListener('wheel', function (e) {
-            if (e.ctrlKey || e.deltaMode === 0) {
-                e.preventDefault();
+        this.workspace.addEventListener('wheel', function (e) {
+            e.preventDefault();
 
-                var oldScale = self.currentZoom / 100;
-                var zoomStep = e.deltaY < 0 ? 1.1 : 0.9;
-                var newZoom = Math.round(self.currentZoom * zoomStep);
-                newZoom = Math.max(10, Math.min(300, newZoom));
-                var newScale = newZoom / 100;
+            var oldScale = self.viewTransform.scale;
+            var zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            var newScale = oldScale * zoomFactor;
+            newScale = Math.max(0.1, Math.min(3.0, newScale));
 
-                var rect = workspace.getBoundingClientRect();
-                var mouseX = e.clientX - rect.left + workspace.scrollLeft;
-                var mouseY = e.clientY - rect.top + workspace.scrollTop;
+            var rect = self.workspace.getBoundingClientRect();
+            var mouseX = e.clientX - rect.left;
+            var mouseY = e.clientY - rect.top;
 
-                var canvasMouseX = mouseX / oldScale;
-                var canvasMouseY = mouseY / oldScale;
+            var canvasX = (mouseX - self.viewTransform.x) / oldScale;
+            var canvasY = (mouseY - self.viewTransform.y) / oldScale;
 
-                self.currentZoom = newZoom;
-                self._applyZoom();
-                self.toolbar.updateZoom(newZoom);
+            self.viewTransform.x = mouseX - canvasX * newScale;
+            self.viewTransform.y = mouseY - canvasY * newScale;
+            self.viewTransform.scale = newScale;
 
-                workspace.scrollLeft = canvasMouseX * newScale - (e.clientX - rect.left);
-                workspace.scrollTop = canvasMouseY * newScale - (e.clientY - rect.top);
-            }
+            self._applyView();
         }, { passive: false });
     }
 
-    _setupPan() {
-        var workspace = document.getElementById('workspace');
-        var isPanning = false;
-        var startX = 0;
-        var startY = 0;
-        var scrollStartX = 0;
-        var scrollStartY = 0;
+    // --- Pan avec clic gauche ---
 
-        workspace.addEventListener('mousedown', function (e) {
-            if (e.target === workspace || e.target.id === 'page-container' || e.target.id === 'page-canvas') {
-                if (e.target.id === 'page-canvas') {
-                    var canvas = document.getElementById('page-canvas');
-                    var wrappers = canvas.querySelectorAll('.screenshot-wrapper');
-                    var clickedOnImage = false;
-                    for (var i = 0; i < wrappers.length; i++) {
-                        if (wrappers[i].contains(e.target)) {
-                            clickedOnImage = true;
-                            break;
-                        }
-                    }
-                    if (clickedOnImage) return;
-                }
-                isPanning = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                scrollStartX = workspace.scrollLeft;
-                scrollStartY = workspace.scrollTop;
-                workspace.style.cursor = 'grabbing';
-                e.preventDefault();
-            }
+    _setupPan() {
+        var self = this;
+        var isPanning = false;
+        var startX, startY, startTx, startTy;
+
+        this.workspace.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            if (e.target.closest('.screenshot-wrapper')) return;
+
+            isPanning = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startTx = self.viewTransform.x;
+            startTy = self.viewTransform.y;
+            self.workspace.classList.add('panning');
+            e.preventDefault();
         });
 
         document.addEventListener('mousemove', function (e) {
             if (!isPanning) return;
-            workspace.scrollLeft = scrollStartX - (e.clientX - startX);
-            workspace.scrollTop = scrollStartY - (e.clientY - startY);
+            self.viewTransform.x = startTx + (e.clientX - startX);
+            self.viewTransform.y = startTy + (e.clientY - startY);
+            self._applyView();
         });
 
         document.addEventListener('mouseup', function () {
             if (isPanning) {
                 isPanning = false;
-                workspace.style.cursor = '';
+                self.workspace.classList.remove('panning');
             }
         });
     }
@@ -234,6 +224,7 @@ class App {
             this.projectManager.addProject(project);
             this.toolbar.updateHeight(project.imageHeight);
             this._updateAll();
+            this._centerView();
         }
     }
 
@@ -300,10 +291,50 @@ class App {
 
     positionScreenshots() {
         var project = this.projectManager.getActive();
-        if (!project) return;
-        this.layoutEngine.positionAll(project, this.referencePoint);
+        if (!project || !this.selectedScreenshotId) {
+            alert('Selectionnez une image a positionner.');
+            return;
+        }
+
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(this.selectedScreenshotId);
+        if (!screenshot) return;
+
+        var margin = this.configManager.getDefault('pageMargin');
+        var pageWidth = this.configManager.getDefault('pageWidth');
+        var maxX = pageWidth - margin;
+        var gap = 10;
+
+        screenshot.resize(project.imageHeight);
+
+        if (!this.referencePoint) {
+            this.referencePoint = {
+                x: margin,
+                y: margin,
+                rowStartX: margin,
+                rowHeight: 0
+            };
+        }
+
+        if (this.referencePoint.x + screenshot.width > maxX && this.referencePoint.x > this.referencePoint.rowStartX) {
+            this.referencePoint.x = this.referencePoint.rowStartX;
+            this.referencePoint.y += this.referencePoint.rowHeight + gap;
+            this.referencePoint.rowHeight = 0;
+        }
+
+        screenshot.x = this.referencePoint.x;
+        screenshot.y = this.referencePoint.y;
+        screenshot.positioned = true;
+
+        this.referencePoint.x += screenshot.width + gap;
+        this.referencePoint.rowHeight = Math.max(
+            this.referencePoint.rowHeight,
+            screenshot.height + 30
+        );
+
         project.markModified();
-        this._updateAll();
+        this.renderPage();
+        this._updateTabBar();
     }
 
     // --- Configuration ---
@@ -317,8 +348,21 @@ class App {
     }
 
     changeZoom(zoomPercent) {
-        this.currentZoom = zoomPercent;
-        this._applyZoom();
+        var oldScale = this.viewTransform.scale;
+        var newScale = zoomPercent / 100;
+
+        var rect = this.workspace.getBoundingClientRect();
+        var centerX = rect.width / 2;
+        var centerY = rect.height / 2;
+
+        var canvasX = (centerX - this.viewTransform.x) / oldScale;
+        var canvasY = (centerY - this.viewTransform.y) / oldScale;
+
+        this.viewTransform.x = centerX - canvasX * newScale;
+        this.viewTransform.y = centerY - canvasY * newScale;
+        this.viewTransform.scale = newScale;
+
+        this._applyView();
     }
 
     // --- Pages ---
@@ -463,17 +507,22 @@ class App {
             self.canvas.appendChild(wrapper);
         });
 
-        this._applyZoom();
+        this._applyView();
     }
 
-    _applyZoom() {
-        var scale = this.currentZoom / 100;
-        this.canvas.style.transform = 'scale(' + scale + ')';
-        this.canvas.dataset.scale = scale;
+    _applyView() {
+        var t = this.viewTransform;
+        this.container.style.transform = 'translate(' + t.x + 'px, ' + t.y + 'px) scale(' + t.scale + ')';
+        this.canvas.dataset.scale = t.scale;
+        this.toolbar.updateZoom(Math.round(t.scale * 100));
+    }
 
-        var container = document.getElementById('page-container');
-        container.style.width = (2480 * scale) + 'px';
-        container.style.height = (1754 * scale) + 'px';
+    _centerView() {
+        var rect = this.workspace.getBoundingClientRect();
+        var scale = this.viewTransform.scale;
+        this.viewTransform.x = (rect.width - 2480 * scale) / 2;
+        this.viewTransform.y = (rect.height - 1754 * scale) / 2;
+        this._applyView();
     }
 
     _updateAll() {
