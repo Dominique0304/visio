@@ -5,7 +5,8 @@ class App {
         this.configManager = new ConfigManager();
         this.layoutEngine = new LayoutEngine(
             this.configManager.getDefault('pageWidth'),
-            this.configManager.getDefault('pageHeight')
+            this.configManager.getDefault('pageHeight'),
+            this.configManager.getDefault('pageMargin')
         );
         this.dragManager = new DragManager(this._onDragEnd.bind(this));
 
@@ -20,6 +21,8 @@ class App {
         this._setupPasteListener();
         this._setupKeyboardShortcuts();
         this._setupCanvasClick();
+        this._setupWheelZoom();
+        this._setupPan();
 
         this.newProject();
     }
@@ -78,6 +81,82 @@ class App {
         }.bind(this));
     }
 
+    _setupWheelZoom() {
+        var workspace = document.getElementById('workspace');
+        var self = this;
+        workspace.addEventListener('wheel', function (e) {
+            if (e.ctrlKey || e.deltaMode === 0) {
+                e.preventDefault();
+
+                var oldScale = self.currentZoom / 100;
+                var zoomStep = e.deltaY < 0 ? 1.1 : 0.9;
+                var newZoom = Math.round(self.currentZoom * zoomStep);
+                newZoom = Math.max(10, Math.min(300, newZoom));
+                var newScale = newZoom / 100;
+
+                var rect = workspace.getBoundingClientRect();
+                var mouseX = e.clientX - rect.left + workspace.scrollLeft;
+                var mouseY = e.clientY - rect.top + workspace.scrollTop;
+
+                var canvasMouseX = mouseX / oldScale;
+                var canvasMouseY = mouseY / oldScale;
+
+                self.currentZoom = newZoom;
+                self._applyZoom();
+                self.toolbar.updateZoom(newZoom);
+
+                workspace.scrollLeft = canvasMouseX * newScale - (e.clientX - rect.left);
+                workspace.scrollTop = canvasMouseY * newScale - (e.clientY - rect.top);
+            }
+        }, { passive: false });
+    }
+
+    _setupPan() {
+        var workspace = document.getElementById('workspace');
+        var isPanning = false;
+        var startX = 0;
+        var startY = 0;
+        var scrollStartX = 0;
+        var scrollStartY = 0;
+
+        workspace.addEventListener('mousedown', function (e) {
+            if (e.target === workspace || e.target.id === 'page-container' || e.target.id === 'page-canvas') {
+                if (e.target.id === 'page-canvas') {
+                    var canvas = document.getElementById('page-canvas');
+                    var wrappers = canvas.querySelectorAll('.screenshot-wrapper');
+                    var clickedOnImage = false;
+                    for (var i = 0; i < wrappers.length; i++) {
+                        if (wrappers[i].contains(e.target)) {
+                            clickedOnImage = true;
+                            break;
+                        }
+                    }
+                    if (clickedOnImage) return;
+                }
+                isPanning = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                scrollStartX = workspace.scrollLeft;
+                scrollStartY = workspace.scrollTop;
+                workspace.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!isPanning) return;
+            workspace.scrollLeft = scrollStartX - (e.clientX - startX);
+            workspace.scrollTop = scrollStartY - (e.clientY - startY);
+        });
+
+        document.addEventListener('mouseup', function () {
+            if (isPanning) {
+                isPanning = false;
+                workspace.style.cursor = '';
+            }
+        });
+    }
+
     _handlePaste(event) {
         if (event.target.contentEditable === 'true' || event.target.tagName === 'INPUT') {
             return;
@@ -105,9 +184,11 @@ class App {
                         if (self.referencePoint) {
                             screenshot.resize(project.imageHeight);
                             var pageWidth = self.configManager.getDefault('pageWidth');
+                            var margin = self.configManager.getDefault('pageMargin');
                             var gap = 10;
+                            var maxX = pageWidth - margin;
 
-                            if (self.referencePoint.x + screenshot.width > pageWidth && self.referencePoint.x > 0) {
+                            if (self.referencePoint.x + screenshot.width > maxX && self.referencePoint.x > self.referencePoint.rowStartX) {
                                 self.referencePoint.x = self.referencePoint.rowStartX;
                                 self.referencePoint.y += self.referencePoint.rowHeight + gap;
                                 self.referencePoint.rowHeight = 0;
@@ -220,7 +301,7 @@ class App {
     positionScreenshots() {
         var project = this.projectManager.getActive();
         if (!project) return;
-        this.layoutEngine.positionAll(project);
+        this.layoutEngine.positionAll(project, this.referencePoint);
         project.markModified();
         this._updateAll();
     }

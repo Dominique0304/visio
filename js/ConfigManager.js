@@ -4,6 +4,7 @@ class ConfigManager {
             imageHeight: 200,
             pageWidth: 2480,
             pageHeight: 1754,
+            pageMargin: 59,
         };
     }
 

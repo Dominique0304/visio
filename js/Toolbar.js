@@ -52,19 +52,21 @@ class Toolbar {
 
         const zoomLabel = document.createElement('label');
         zoomLabel.textContent = 'Zoom : ';
-        const zoomSelect = document.createElement('select');
-        zoomSelect.id = 'zoom-select';
-        [25, 50, 75, 100, 125, 150].forEach(z => {
-            const opt = document.createElement('option');
-            opt.value = z;
-            opt.textContent = z + '%';
-            if (z === 50) opt.selected = true;
-            zoomSelect.appendChild(opt);
+        const zoomInput = document.createElement('input');
+        zoomInput.type = 'number';
+        zoomInput.id = 'zoom-input';
+        zoomInput.min = 10;
+        zoomInput.max = 300;
+        zoomInput.value = 50;
+        zoomInput.addEventListener('change', (e) => {
+            var val = Math.max(10, Math.min(300, parseInt(e.target.value) || 50));
+            e.target.value = val;
+            this.callbacks.onZoomChange(val);
         });
-        zoomSelect.addEventListener('change', (e) => {
-            this.callbacks.onZoomChange(parseInt(e.target.value));
-        });
-        zoomLabel.appendChild(zoomSelect);
+        const zoomUnit = document.createElement('span');
+        zoomUnit.textContent = ' %';
+        zoomLabel.appendChild(zoomInput);
+        zoomLabel.appendChild(zoomUnit);
         configSection.appendChild(zoomLabel);
 
         this.container.appendChild(configSection);
@@ -90,7 +92,7 @@ class Toolbar {
     }
 
     updateZoom(value) {
-        const select = document.getElementById('zoom-select');
-        if (select) select.value = value;
+        var input = document.getElementById('zoom-input');
+        if (input) input.value = value;
     }
 }
