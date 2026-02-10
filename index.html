@@ -3,27 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World - Page d'essai</title>
-    <style>
-        /* Style minimal pour centrer le texte */
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-            background-color: white;
-        }
-        
-        h1 {
-            font-size: 3rem;
-            color: #333;
-        }
-    </style>
+    <title>Visio - Suivi de Projet</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <h1>salut toi</h1>
+    <div id="app">
+        <div id="tab-bar"></div>
+        <div id="toolbar"></div>
+        <div id="workspace">
+            <div id="page-container">
+                <div id="page-canvas"></div>
+            </div>
+        </div>
+        <div id="page-navigator"></div>
+    </div>
+
+    <script src="js/ConfigManager.js"></script>
+    <script src="js/Screenshot.js"></script>
+    <script src="js/Page.js"></script>
+    <script src="js/Project.js"></script>
+    <script src="js/LayoutEngine.js"></script>
+    <script src="js/DragManager.js"></script>
+    <script src="js/FileManager.js"></script>
+    <script src="js/TabBar.js"></script>
+    <script src="js/Toolbar.js"></script>
+    <script src="js/PageNavigator.js"></script>
+    <script src="js/ProjectManager.js"></script>
+    <script src="js/App.js"></script>
 </body>
 </html>
