@@ -12,6 +12,7 @@ class App {
         this.canvas = document.getElementById('page-canvas');
         this.currentZoom = 50;
         this.selectedScreenshotId = null;
+        this.referencePoint = null;
 
         this._initTabBar();
         this._initToolbar();
@@ -38,6 +39,7 @@ class App {
             onOpen: this.openProject.bind(this),
             onSave: this.saveProject.bind(this),
             onPosition: this.positionScreenshots.bind(this),
+            onInitialize: this.initializeReference.bind(this),
             onHeightChange: this.changeImageHeight.bind(this),
             onZoomChange: this.changeZoom.bind(this)
         });
@@ -99,6 +101,29 @@ class App {
                             originalWidth: img.naturalWidth,
                             originalHeight: img.naturalHeight
                         });
+
+                        if (self.referencePoint) {
+                            screenshot.resize(project.imageHeight);
+                            var pageWidth = self.configManager.getDefault('pageWidth');
+                            var gap = 10;
+
+                            if (self.referencePoint.x + screenshot.width > pageWidth && self.referencePoint.x > 0) {
+                                self.referencePoint.x = self.referencePoint.rowStartX;
+                                self.referencePoint.y += self.referencePoint.rowHeight + gap;
+                                self.referencePoint.rowHeight = 0;
+                            }
+
+                            screenshot.x = self.referencePoint.x;
+                            screenshot.y = self.referencePoint.y;
+                            screenshot.positioned = true;
+
+                            self.referencePoint.x += screenshot.width + gap;
+                            self.referencePoint.rowHeight = Math.max(
+                                self.referencePoint.rowHeight,
+                                screenshot.height + 30
+                            );
+                        }
+
                         project.getCurrentPage().addScreenshot(screenshot);
                         project.markModified();
                         self.renderPage();
@@ -170,7 +195,27 @@ class App {
         this._updateTabBar();
     }
 
-    // --- Positionnement ---
+    // --- Initialisation / Positionnement ---
+
+    initializeReference() {
+        var project = this.projectManager.getActive();
+        if (!project || !this.selectedScreenshotId) {
+            alert('Selectionnez une image avant de cliquer sur Initialiser.');
+            return;
+        }
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(this.selectedScreenshotId);
+        if (!screenshot) return;
+
+        this.referencePoint = {
+            x: screenshot.x,
+            y: screenshot.y,
+            rowStartX: screenshot.x,
+            rowHeight: 0
+        };
+
+        this.toolbar.showReferenceStatus(true);
+    }
 
     positionScreenshots() {
         var project = this.projectManager.getActive();

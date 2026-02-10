@@ -143,6 +143,25 @@ body {
     background-color: #3a7ab6;
 }
 
+.btn-initialize {
+    background-color: #496a2e;
+    border-color: #5a8a3a;
+}
+
+.btn-initialize:hover {
+    background-color: #5a8a3a;
+}
+
+.toolbar-status {
+    padding: 4px 10px;
+    background-color: #496a2e;
+    border: 1px solid #5a8a3a;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #c0e0a0;
+    font-weight: bold;
+}
+
 .toolbar-config {
     display: flex;
     align-items: center;

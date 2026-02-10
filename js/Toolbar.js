@@ -13,6 +13,7 @@ class Toolbar {
             { label: 'Ouvrir', action: 'onOpen' },
             { label: 'Enregistrer', action: 'onSave' },
             { label: 'Positionnement', action: 'onPosition', className: 'btn-position' },
+            { label: 'Initialiser', action: 'onInitialize', className: 'btn-initialize' },
         ];
 
         const btnGroup = document.createElement('div');
@@ -67,6 +68,20 @@ class Toolbar {
         configSection.appendChild(zoomLabel);
 
         this.container.appendChild(configSection);
+
+        var statusSection = document.createElement('div');
+        statusSection.className = 'toolbar-status';
+        statusSection.id = 'reference-status';
+        statusSection.style.display = 'none';
+        statusSection.textContent = 'Ref. active';
+        this.container.appendChild(statusSection);
+    }
+
+    showReferenceStatus(active) {
+        var status = document.getElementById('reference-status');
+        if (status) {
+            status.style.display = active ? 'inline-block' : 'none';
+        }
     }
 
     updateHeight(value) {
