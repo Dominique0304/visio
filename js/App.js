@@ -123,6 +123,10 @@ class App {
             if (e.button !== 0) return;
             if (e.target.closest('.screenshot-wrapper')) return;
 
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                document.activeElement.blur();
+            }
+
             isPanning = true;
             startX = e.clientX;
             startY = e.clientY;

@@ -43,6 +43,9 @@ class Toolbar {
         heightInput.addEventListener('change', (e) => {
             this.callbacks.onHeightChange(parseInt(e.target.value));
         });
+        heightInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'Enter') e.target.blur();
+        });
         const heightUnit = document.createElement('span');
         heightUnit.textContent = ' px';
 
@@ -62,6 +65,9 @@ class Toolbar {
             var val = Math.max(10, Math.min(300, parseInt(e.target.value) || 50));
             e.target.value = val;
             this.callbacks.onZoomChange(val);
+        });
+        zoomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'Enter') e.target.blur();
         });
         const zoomUnit = document.createElement('span');
         zoomUnit.textContent = ' %';
