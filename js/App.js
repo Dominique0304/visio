@@ -24,6 +24,7 @@ class App {
         this._initTabBar();
         this._initToolbar();
         this._initPageNavigator();
+        this._initContextMenu();
         this._wasDragging = false;
         this._selectionChangedOnMousedown = false;
 
@@ -69,6 +70,40 @@ class App {
             onAdd: this.addPage.bind(this),
             onRemove: this.removePage.bind(this)
         });
+    }
+
+    _initContextMenu() {
+        this.contextMenu = new ContextMenu({
+            onComment: this._onContextComment.bind(this),
+            onInsertLink: this._onContextInsertLink.bind(this),
+            onShowLink: this._onContextShowLink.bind(this),
+            onDelete: this._onContextDelete.bind(this)
+        });
+    }
+
+    _onContextComment(screenshotId) {
+        // TODO
+    }
+
+    _onContextInsertLink(screenshotId) {
+        // TODO
+    }
+
+    _onContextShowLink(screenshotId) {
+        // TODO
+    }
+
+    _onContextDelete(screenshotId) {
+        if (!screenshotId) return;
+        var project = this.projectManager.getActive();
+        if (!project) return;
+        this._saveState();
+        var page = project.getCurrentPage();
+        page.removeScreenshot(screenshotId);
+        this.selectedScreenshotIds.delete(screenshotId);
+        project.markModified();
+        this.renderPage();
+        this._updateTabBar();
     }
 
     _setupPasteListener() {
@@ -836,6 +871,17 @@ class App {
 
                 var items = self._buildDragItems(screenshot.id);
                 self.dragManager.startDrag(e, items);
+            });
+
+            wrapper.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!self.selectedScreenshotIds.has(screenshot.id)) {
+                    self._deselectAll();
+                    self.selectedScreenshotIds.add(screenshot.id);
+                    wrapper.classList.add('selected');
+                }
+                self.contextMenu.show(e.clientX, e.clientY, screenshot.id);
             });
 
             if (screenshot.positioned && screenshot.index !== undefined) {

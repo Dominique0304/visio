@@ -401,3 +401,37 @@ body {
     text-align: center;
 }
 
+/* ========== Context Menu ========== */
+
+.context-menu {
+    position: fixed;
+    background-color: #2d2d2d;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 4px 0;
+    min-width: 200px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    user-select: none;
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.context-menu-item:hover {
+    background-color: #3a5a8a;
+}
+
+.context-menu-danger {
+    color: #ff6b6b;
+}
+
+.context-menu-danger:hover {
+    background-color: #5a2a2a;
+}
+
