@@ -1,5 +1,5 @@
 class Screenshot {
-    constructor({ id, imageData, originalWidth, originalHeight, date, x, y, width, height, positioned, comment }) {
+    constructor({ id, imageData, originalWidth, originalHeight, date, x, y, width, height, positioned, comment, link }) {
         this.id = id || this._generateId();
         this.imageData = imageData;
         this.originalWidth = originalWidth;
@@ -11,6 +11,7 @@ class Screenshot {
         this.height = height || originalHeight;
         this.positioned = positioned || false;
         this.comment = comment || '';
+        this.link = link || '';
     }
 
     _generateId() {
@@ -42,7 +43,8 @@ class Screenshot {
             width: this.width,
             height: this.height,
             positioned: this.positioned,
-            comment: this.comment
+            comment: this.comment,
+            link: this.link
         };
     }
 

@@ -173,11 +173,124 @@ class App {
     }
 
     _onContextInsertLink(screenshotId) {
-        // TODO
+        var project = this.projectManager.getActive();
+        if (!project || !screenshotId) return;
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(screenshotId);
+        if (!screenshot) return;
+
+        var self = this;
+        var overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        var dialog = document.createElement('div');
+        dialog.className = 'modal-dialog';
+
+        var titleBar = document.createElement('div');
+        titleBar.className = 'modal-titlebar';
+        titleBar.textContent = 'Ins\u00e9rer lien hypertexte';
+
+        var isDraggingModal = false;
+        var dragOffsetX = 0;
+        var dragOffsetY = 0;
+
+        titleBar.addEventListener('mousedown', function (e) {
+            isDraggingModal = true;
+            var rect = dialog.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function onMove(e) {
+            if (!isDraggingModal) return;
+            dialog.style.left = (e.clientX - dragOffsetX) + 'px';
+            dialog.style.top = (e.clientY - dragOffsetY) + 'px';
+            dialog.style.margin = '0';
+            overlay._onMove = onMove;
+        });
+
+        document.addEventListener('mouseup', function onUp() {
+            isDraggingModal = false;
+            overlay._onUp = onUp;
+        });
+
+        var inputWrapper = document.createElement('div');
+        inputWrapper.style.padding = '16px';
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'modal-link-input';
+        input.value = screenshot.link || '';
+        input.placeholder = 'https://...';
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnOk.click();
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeModal();
+            }
+        });
+
+        inputWrapper.appendChild(input);
+
+        var btnRow = document.createElement('div');
+        btnRow.className = 'modal-buttons';
+
+        var closeModal = function () {
+            document.body.removeChild(overlay);
+            if (overlay._onMove) document.removeEventListener('mousemove', overlay._onMove);
+            if (overlay._onUp) document.removeEventListener('mouseup', overlay._onUp);
+        };
+
+        var btnOk = document.createElement('button');
+        btnOk.className = 'modal-btn modal-btn-ok';
+        btnOk.textContent = 'OK';
+        btnOk.addEventListener('click', function () {
+            var newLink = input.value.trim();
+            if (newLink !== (screenshot.link || '')) {
+                self._saveState();
+                screenshot.link = newLink;
+                project.markModified();
+                self.renderPage();
+                self._updateTabBar();
+            }
+            closeModal();
+        });
+
+        var btnCancel = document.createElement('button');
+        btnCancel.className = 'modal-btn modal-btn-cancel';
+        btnCancel.textContent = 'Annuler';
+        btnCancel.addEventListener('click', function () {
+            closeModal();
+        });
+
+        btnRow.appendChild(btnOk);
+        btnRow.appendChild(btnCancel);
+        dialog.appendChild(titleBar);
+        dialog.appendChild(inputWrapper);
+        dialog.appendChild(btnRow);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        input.focus();
+        input.select();
     }
 
     _onContextShowLink(screenshotId) {
-        // TODO
+        var project = this.projectManager.getActive();
+        if (!project || !screenshotId) return;
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(screenshotId);
+        if (!screenshot) return;
+
+        if (screenshot.link) {
+            window.open(screenshot.link, '_blank');
+        } else {
+            alert('Aucun lien hypertexte d\u00e9fini pour cette image.');
+        }
     }
 
     _onContextDelete(screenshotId) {
@@ -887,6 +1000,7 @@ class App {
             var cls = 'screenshot-wrapper';
             if (screenshot.positioned) cls += ' positioned';
             if (screenshot.comment) cls += ' has-comment';
+            if (screenshot.link) cls += ' has-link';
             wrapper.className = cls;
             wrapper.dataset.id = screenshot.id;
 
@@ -979,6 +1093,13 @@ class App {
                 badge.className = 'screenshot-index';
                 badge.textContent = screenshot.index;
                 wrapper.appendChild(badge);
+            }
+
+            if (screenshot.link) {
+                var linkBadge = document.createElement('div');
+                linkBadge.className = 'screenshot-link-badge';
+                linkBadge.textContent = '\uD83D\uDD17';
+                wrapper.appendChild(linkBadge);
             }
 
             if (self.selectedScreenshotIds.has(screenshot.id)) {
