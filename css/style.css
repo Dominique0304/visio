@@ -161,6 +161,24 @@ body {
     background-color: #9a6aaa;
 }
 
+.btn-undo {
+    background-color: #5a5a6a;
+    border-color: #6a6a7a;
+}
+
+.btn-undo:hover {
+    background-color: #6a6a7a;
+}
+
+.btn-redo {
+    background-color: #5a5a6a;
+    border-color: #6a6a7a;
+}
+
+.btn-redo:hover {
+    background-color: #6a6a7a;
+}
+
 .toolbar-status {
     padding: 4px 10px;
     background-color: #496a2e;

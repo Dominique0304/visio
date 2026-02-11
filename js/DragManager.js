@@ -1,11 +1,13 @@
 class DragManager {
-    constructor(onDragEnd) {
+    constructor(onDragEnd, onDragStart) {
         this.isDragging = false;
+        this.hasMoved = false;
         this.currentElement = null;
         this.currentScreenshot = null;
         this.offsetX = 0;
         this.offsetY = 0;
         this.onDragEnd = onDragEnd;
+        this.onDragStart = onDragStart;
 
         this._handleMouseMove = this._handleMouseMove.bind(this);
         this._handleMouseUp = this._handleMouseUp.bind(this);
@@ -14,6 +16,7 @@ class DragManager {
     startDrag(event, element, screenshot) {
         event.preventDefault();
         this.isDragging = true;
+        this.hasMoved = false;
         this.currentElement = element;
         this.currentScreenshot = screenshot;
 
@@ -29,6 +32,13 @@ class DragManager {
 
     _handleMouseMove(event) {
         if (!this.isDragging) return;
+
+        if (!this.hasMoved) {
+            this.hasMoved = true;
+            if (this.onDragStart) {
+                this.onDragStart(this.currentScreenshot);
+            }
+        }
 
         var canvas = document.getElementById('page-canvas');
         var canvasRect = canvas.getBoundingClientRect();

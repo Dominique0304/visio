@@ -8,7 +8,7 @@ class App {
             this.configManager.getDefault('pageHeight'),
             this.configManager.getDefault('pageMargin')
         );
-        this.dragManager = new DragManager(this._onDragEnd.bind(this));
+        this.dragManager = new DragManager(this._onDragEnd.bind(this), this._onDragStart.bind(this));
 
         this.canvas = document.getElementById('page-canvas');
         this.container = document.getElementById('page-container');
@@ -17,6 +17,9 @@ class App {
         this.viewTransform = { x: 0, y: 0, scale: 0.5 };
         this.selectedScreenshotId = null;
         this.referencePoint = null;
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxHistory = 20;
 
         this._initTabBar();
         this._initToolbar();
@@ -48,6 +51,8 @@ class App {
             onPosition: this.positionScreenshots.bind(this),
             onInitialize: this.initializeReference.bind(this),
             onReorganize: this.reorganize.bind(this),
+            onUndo: this.undo.bind(this),
+            onRedo: this.redo.bind(this),
             onHeightChange: this.changeImageHeight.bind(this),
             onZoomChange: this.changeZoom.bind(this)
         });
@@ -68,11 +73,23 @@ class App {
 
     _setupKeyboardShortcuts() {
         document.addEventListener('keydown', function (e) {
+            var tag = document.activeElement ? document.activeElement.tagName : '';
+            var isEditing = (tag === 'INPUT' || tag === 'TEXTAREA' ||
+                document.activeElement.contentEditable === 'true');
+
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 this.saveProject();
             }
-            if (e.key === 'Delete' && this.selectedScreenshotId) {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                this.undo();
+            }
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                this.redo();
+            }
+            if (e.key === 'Delete' && this.selectedScreenshotId && !isEditing) {
                 this.deleteSelectedScreenshot();
             }
         }.bind(this));
@@ -200,6 +217,7 @@ class App {
                             );
                         }
 
+                        self._saveState();
                         project.getCurrentPage().addScreenshot(screenshot);
                         project.markModified();
                         self.renderPage();
@@ -272,6 +290,58 @@ class App {
         this._updateTabBar();
     }
 
+    // --- Undo / Redo ---
+
+    _saveState() {
+        var project = this.projectManager.getActive();
+        if (!project) return;
+        var snapshot = JSON.stringify(project.toJSON());
+        this.undoStack.push(snapshot);
+        if (this.undoStack.length > this.maxHistory) {
+            this.undoStack.shift();
+        }
+        this.redoStack = [];
+    }
+
+    undo() {
+        var project = this.projectManager.getActive();
+        if (!project || this.undoStack.length === 0) return;
+
+        var currentSnapshot = JSON.stringify(project.toJSON());
+        this.redoStack.push(currentSnapshot);
+
+        var previousSnapshot = this.undoStack.pop();
+        this._restoreState(previousSnapshot);
+    }
+
+    redo() {
+        var project = this.projectManager.getActive();
+        if (!project || this.redoStack.length === 0) return;
+
+        var currentSnapshot = JSON.stringify(project.toJSON());
+        this.undoStack.push(currentSnapshot);
+
+        var nextSnapshot = this.redoStack.pop();
+        this._restoreState(nextSnapshot);
+    }
+
+    _restoreState(snapshot) {
+        var data = JSON.parse(snapshot);
+        var project = this.projectManager.getActive();
+        if (!project) return;
+
+        var restored = Project.fromJSON(data);
+        project.pages = restored.pages;
+        project.imageHeight = restored.imageHeight;
+        project.name = restored.name;
+        project.currentPageIndex = Math.min(project.currentPageIndex, project.pages.length - 1);
+        project.markModified();
+
+        this.toolbar.updateHeight(project.imageHeight);
+        this.selectedScreenshotId = null;
+        this._updateAll();
+    }
+
     // --- Initialisation / Positionnement ---
 
     initializeReference() {
@@ -306,6 +376,7 @@ class App {
         var screenshot = page.getScreenshot(this.selectedScreenshotId);
         if (!screenshot) return;
 
+        this._saveState();
         var margin = this.configManager.getDefault('pageMargin');
         var pageWidth = this.configManager.getDefault('pageWidth');
         var maxX = pageWidth - margin;
@@ -382,6 +453,7 @@ class App {
         var page = project.getCurrentPage();
         if (page.screenshots.length === 0) return;
 
+        this._saveState();
         var margin = this.configManager.getDefault('pageMargin');
         var pageWidth = this.configManager.getDefault('pageWidth');
         var maxX = pageWidth - margin;
@@ -495,6 +567,7 @@ class App {
     deleteSelectedScreenshot() {
         var project = this.projectManager.getActive();
         if (!project || !this.selectedScreenshotId) return;
+        this._saveState();
         var page = project.getCurrentPage();
         page.removeScreenshot(this.selectedScreenshotId);
         this.selectedScreenshotId = null;
@@ -514,6 +587,10 @@ class App {
         this.selectedScreenshotId = null;
         var prev = this.canvas.querySelector('.screenshot-wrapper.selected');
         if (prev) prev.classList.remove('selected');
+    }
+
+    _onDragStart() {
+        this._saveState();
     }
 
     _onDragEnd() {
@@ -568,10 +645,17 @@ class App {
             dateDiv.className = 'screenshot-date';
             dateDiv.contentEditable = true;
             dateDiv.textContent = screenshot.date;
+            dateDiv.addEventListener('focus', function () {
+                self._dateBefore = screenshot.date;
+            });
             dateDiv.addEventListener('blur', function (e) {
-                screenshot.date = e.target.textContent;
-                project.markModified();
-                self._updateTabBar();
+                var newDate = e.target.textContent;
+                if (newDate !== self._dateBefore) {
+                    self._saveState();
+                    screenshot.date = newDate;
+                    project.markModified();
+                    self._updateTabBar();
+                }
             });
             dateDiv.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
