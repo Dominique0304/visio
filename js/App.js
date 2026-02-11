@@ -230,7 +230,7 @@ class App {
         input.type = 'text';
         input.className = 'modal-link-input';
         input.value = screenshot.link || '';
-        input.placeholder = 'Chemin local, r\u00e9seau (\\\\serveur\\...) ou URL (https://...)';
+        input.placeholder = 'Collez le chemin complet ou l\'URL ici...';
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -242,41 +242,50 @@ class App {
             }
         });
 
-        var btnBrowse = document.createElement('button');
-        btnBrowse.className = 'modal-btn modal-btn-browse';
-        btnBrowse.textContent = 'Parcourir...';
-        btnBrowse.addEventListener('click', function () {
-            if (window.showOpenFilePicker) {
-                window.showOpenFilePicker({ multiple: false }).then(function (handles) {
-                    if (handles && handles.length > 0) {
-                        var handle = handles[0];
-                        input.value = handle.name;
-                        input.focus();
-                    }
-                }).catch(function () {});
-            } else {
-                var fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.style.display = 'none';
-                fileInput.addEventListener('change', function () {
-                    if (fileInput.files && fileInput.files.length > 0) {
-                        var filePath = fileInput.value;
-                        if (filePath.indexOf('fakepath') !== -1) {
-                            filePath = fileInput.files[0].name;
-                        }
-                        input.value = filePath;
-                        input.focus();
-                    }
-                    document.body.removeChild(fileInput);
-                });
-                document.body.appendChild(fileInput);
-                fileInput.click();
+        inputRow.appendChild(input);
+        inputWrapper.appendChild(inputRow);
+
+        // Zone de drop pour glisser-deposer un fichier depuis l'Explorateur
+        var dropZone = document.createElement('div');
+        dropZone.className = 'modal-link-dropzone';
+        dropZone.textContent = 'Ou glissez-d\u00e9posez un fichier ici';
+
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+
+            // Tenter de recuperer le chemin via le texte (fonctionne depuis certains explorateurs)
+            var textData = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list') || '';
+            if (textData) {
+                input.value = textData;
+                input.focus();
+                return;
+            }
+
+            // Sinon recuperer le nom du fichier
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                input.value = e.dataTransfer.files[0].name;
+                input.focus();
             }
         });
+        inputWrapper.appendChild(dropZone);
 
-        inputRow.appendChild(input);
-        inputRow.appendChild(btnBrowse);
-        inputWrapper.appendChild(inputRow);
+        // Astuce pour copier le chemin complet
+        var tip = document.createElement('div');
+        tip.className = 'modal-link-tip';
+        tip.innerHTML = '<strong>Astuce :</strong> Dans l\'Explorateur Windows, <strong>Shift + clic droit</strong> sur le fichier \u2192 <em>\u00ab Copier en tant que chemin \u00bb</em>, puis collez ici.';
+        inputWrapper.appendChild(tip);
 
         var btnRow = document.createElement('div');
         btnRow.className = 'modal-buttons';

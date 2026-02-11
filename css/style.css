@@ -398,15 +398,41 @@ body {
     border-color: #2a94e4;
 }
 
-.modal-btn-browse {
-    background-color: #4a4a4a;
-    color: #e0e0e0;
-    white-space: nowrap;
-    flex-shrink: 0;
+.modal-link-dropzone {
+    margin-top: 12px;
+    padding: 18px;
+    border: 2px dashed #555;
+    border-radius: 6px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+    cursor: default;
 }
 
-.modal-btn-browse:hover {
-    background-color: #5a5a5a;
+.modal-link-dropzone.dragover {
+    border-color: #2a94e4;
+    background-color: rgba(42, 148, 228, 0.1);
+    color: #2a94e4;
+}
+
+.modal-link-tip {
+    margin-top: 12px;
+    padding: 8px 10px;
+    background-color: rgba(42, 148, 100, 0.15);
+    border-left: 3px solid #2a9464;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #b0b0b0;
+    line-height: 1.5;
+}
+
+.modal-link-tip strong {
+    color: #d0d0d0;
+}
+
+.modal-link-tip em {
+    color: #2a94e4;
 }
 
 /* ========== Selection Rectangle ========== */
