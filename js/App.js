@@ -300,7 +300,7 @@ class App {
         btnOk.className = 'modal-btn modal-btn-ok';
         btnOk.textContent = 'OK';
         btnOk.addEventListener('click', function () {
-            var newLink = input.value.trim();
+            var newLink = self._cleanLinkPath(input.value);
             if (newLink !== (screenshot.link || '')) {
                 self._saveState();
                 screenshot.link = newLink;
@@ -330,6 +330,31 @@ class App {
         input.select();
     }
 
+    _cleanLinkPath(rawPath) {
+        var path = rawPath.trim();
+        // Retirer les guillemets ajoutés par Windows "Copier en tant que chemin"
+        if (path.length >= 2 && path.charAt(0) === '"' && path.charAt(path.length - 1) === '"') {
+            path = path.substring(1, path.length - 1);
+        }
+        return path;
+    }
+
+    _linkToUrl(path) {
+        // Si c'est deja une URL (http, https, file), ne pas modifier
+        if (/^https?:\/\//i.test(path) || /^file:\/\/\//i.test(path)) {
+            return path;
+        }
+        // Chemin reseau UNC \\serveur\... -> file://serveur/...
+        if (path.substring(0, 2) === '\\\\') {
+            return 'file://' + path.replace(/\\/g, '/');
+        }
+        // Chemin local Windows C:\... -> file:///C:/...
+        if (/^[A-Za-z]:\\/.test(path) || /^[A-Za-z]:\//.test(path)) {
+            return 'file:///' + path.replace(/\\/g, '/');
+        }
+        return path;
+    }
+
     _onContextShowLink(screenshotId) {
         var project = this.projectManager.getActive();
         if (!project || !screenshotId) return;
@@ -338,7 +363,8 @@ class App {
         if (!screenshot) return;
 
         if (screenshot.link) {
-            window.open(screenshot.link, '_blank');
+            var url = this._linkToUrl(screenshot.link);
+            window.open(url, '_blank');
         } else {
             alert('Aucun lien hypertexte d\u00e9fini pour cette image.');
         }
