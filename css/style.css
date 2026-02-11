@@ -337,6 +337,16 @@ body {
     line-height: 1;
 }
 
+/* ========== Selection Rectangle ========== */
+
+.selection-rect {
+    position: absolute;
+    border: 2px dashed #2a94e4;
+    background-color: rgba(42, 148, 228, 0.15);
+    pointer-events: none;
+    z-index: 9999;
+}
+
 /* ========== Canvas Hint ========== */
 
 .canvas-hint {

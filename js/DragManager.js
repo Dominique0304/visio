@@ -2,10 +2,9 @@ class DragManager {
     constructor(onDragEnd, onDragStart) {
         this.isDragging = false;
         this.hasMoved = false;
-        this.currentElement = null;
-        this.currentScreenshot = null;
-        this.offsetX = 0;
-        this.offsetY = 0;
+        this.startMouseX = 0;
+        this.startMouseY = 0;
+        this.groupItems = [];
         this.onDragEnd = onDragEnd;
         this.onDragStart = onDragStart;
 
@@ -13,18 +12,25 @@ class DragManager {
         this._handleMouseUp = this._handleMouseUp.bind(this);
     }
 
-    startDrag(event, element, screenshot) {
+    startDrag(event, items) {
         event.preventDefault();
         this.isDragging = true;
         this.hasMoved = false;
-        this.currentElement = element;
-        this.currentScreenshot = screenshot;
+        this.startMouseX = event.clientX;
+        this.startMouseY = event.clientY;
 
-        var rect = element.getBoundingClientRect();
-        this.offsetX = event.clientX - rect.left;
-        this.offsetY = event.clientY - rect.top;
+        this.groupItems = items.map(function (item) {
+            return {
+                element: item.element,
+                screenshot: item.screenshot,
+                startX: item.screenshot.x,
+                startY: item.screenshot.y
+            };
+        });
 
-        element.classList.add('dragging');
+        this.groupItems.forEach(function (item) {
+            item.element.classList.add('dragging');
+        });
 
         document.addEventListener('mousemove', this._handleMouseMove);
         document.addEventListener('mouseup', this._handleMouseUp);
@@ -36,38 +42,41 @@ class DragManager {
         if (!this.hasMoved) {
             this.hasMoved = true;
             if (this.onDragStart) {
-                this.onDragStart(this.currentScreenshot);
+                this.onDragStart();
             }
         }
 
         var canvas = document.getElementById('page-canvas');
-        var canvasRect = canvas.getBoundingClientRect();
         var scale = parseFloat(canvas.dataset.scale) || 1;
 
-        var newX = (event.clientX - canvasRect.left - this.offsetX) / scale;
-        var newY = (event.clientY - canvasRect.top - this.offsetY) / scale;
+        var dx = (event.clientX - this.startMouseX) / scale;
+        var dy = (event.clientY - this.startMouseY) / scale;
 
-        this.currentElement.style.left = newX + 'px';
-        this.currentElement.style.top = newY + 'px';
-
-        this.currentScreenshot.x = Math.round(newX);
-        this.currentScreenshot.y = Math.round(newY);
+        this.groupItems.forEach(function (item) {
+            var newX = item.startX + dx;
+            var newY = item.startY + dy;
+            item.element.style.left = newX + 'px';
+            item.element.style.top = newY + 'px';
+            item.screenshot.x = Math.round(newX);
+            item.screenshot.y = Math.round(newY);
+        });
     }
 
     _handleMouseUp() {
         if (!this.isDragging) return;
 
         this.isDragging = false;
-        this.currentElement.classList.remove('dragging');
+        this.groupItems.forEach(function (item) {
+            item.element.classList.remove('dragging');
+        });
 
         document.removeEventListener('mousemove', this._handleMouseMove);
         document.removeEventListener('mouseup', this._handleMouseUp);
 
         if (this.onDragEnd) {
-            this.onDragEnd(this.currentScreenshot);
+            this.onDragEnd();
         }
 
-        this.currentElement = null;
-        this.currentScreenshot = null;
+        this.groupItems = [];
     }
 }

@@ -24,11 +24,15 @@ class App {
         this._initTabBar();
         this._initToolbar();
         this._initPageNavigator();
+        this._wasDragging = false;
+        this._selectionChangedOnMousedown = false;
+
         this._setupPasteListener();
         this._setupKeyboardShortcuts();
         this._setupCanvasClick();
         this._setupWheelZoom();
         this._setupPan();
+        this._setupSelectionRect();
 
         this.newProject();
         this._centerView();
@@ -140,6 +144,7 @@ class App {
         this.workspace.addEventListener('mousedown', function (e) {
             if (e.button !== 0) return;
             if (e.target.closest('.screenshot-wrapper')) return;
+            if (e.shiftKey) return;
 
             if (document.activeElement && document.activeElement.tagName === 'INPUT') {
                 document.activeElement.blur();
@@ -610,6 +615,7 @@ class App {
 
     _onDragStart() {
         this._saveState();
+        this._wasDragging = true;
     }
 
     _onDragEnd() {
@@ -618,6 +624,120 @@ class App {
             project.markModified();
             this._updateTabBar();
         }
+    }
+
+    // --- Selection par rectangle (Shift + clic gauche + deplacement) ---
+
+    _setupSelectionRect() {
+        var self = this;
+        var isSelecting = false;
+        var startX, startY;
+        var rectEl = null;
+
+        this.workspace.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            if (!e.shiftKey) return;
+            if (e.target.closest('.screenshot-wrapper')) return;
+
+            isSelecting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            rectEl = document.createElement('div');
+            rectEl.className = 'selection-rect';
+            var wsRect = self.workspace.getBoundingClientRect();
+            rectEl.style.left = (e.clientX - wsRect.left) + 'px';
+            rectEl.style.top = (e.clientY - wsRect.top) + 'px';
+            rectEl.style.width = '0px';
+            rectEl.style.height = '0px';
+            self.workspace.appendChild(rectEl);
+
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!isSelecting) return;
+
+            var wsRect = self.workspace.getBoundingClientRect();
+            var currentX = e.clientX;
+            var currentY = e.clientY;
+
+            var x = Math.min(startX, currentX) - wsRect.left;
+            var y = Math.min(startY, currentY) - wsRect.top;
+            var w = Math.abs(currentX - startX);
+            var h = Math.abs(currentY - startY);
+
+            rectEl.style.left = x + 'px';
+            rectEl.style.top = y + 'px';
+            rectEl.style.width = w + 'px';
+            rectEl.style.height = h + 'px';
+        });
+
+        document.addEventListener('mouseup', function (e) {
+            if (!isSelecting) return;
+            isSelecting = false;
+
+            var wsRect = self.workspace.getBoundingClientRect();
+            var selLeft = Math.min(startX, e.clientX) - wsRect.left;
+            var selTop = Math.min(startY, e.clientY) - wsRect.top;
+            var selRight = Math.max(startX, e.clientX) - wsRect.left;
+            var selBottom = Math.max(startY, e.clientY) - wsRect.top;
+
+            var t = self.viewTransform;
+            var canvasLeft = (selLeft - t.x) / t.scale;
+            var canvasTop = (selTop - t.y) / t.scale;
+            var canvasRight = (selRight - t.x) / t.scale;
+            var canvasBottom = (selBottom - t.y) / t.scale;
+
+            var project = self.projectManager.getActive();
+            if (project) {
+                var page = project.getCurrentPage();
+                page.screenshots.forEach(function (screenshot) {
+                    if (!screenshot.positioned) return;
+                    var sx = screenshot.x;
+                    var sy = screenshot.y;
+                    var sw = screenshot.width;
+                    var sh = screenshot.height + 30;
+
+                    if (sx + sw > canvasLeft && sx < canvasRight &&
+                        sy + sh > canvasTop && sy < canvasBottom) {
+                        self.selectedScreenshotIds.add(screenshot.id);
+                        var el = self.canvas.querySelector('.screenshot-wrapper[data-id="' + screenshot.id + '"]');
+                        if (el) el.classList.add('selected');
+                    }
+                });
+            }
+
+            if (rectEl && rectEl.parentNode) {
+                rectEl.parentNode.removeChild(rectEl);
+            }
+            rectEl = null;
+        });
+    }
+
+    _buildDragItems(screenshotId) {
+        var project = this.projectManager.getActive();
+        if (!project) return [];
+        var page = project.getCurrentPage();
+        var items = [];
+        var self = this;
+
+        if (this.selectedScreenshotIds.has(screenshotId)) {
+            this.selectedScreenshotIds.forEach(function (id) {
+                var el = self.canvas.querySelector('.screenshot-wrapper[data-id="' + id + '"]');
+                var ss = page.getScreenshot(id);
+                if (el && ss && ss.positioned) {
+                    items.push({ element: el, screenshot: ss });
+                }
+            });
+        } else {
+            var el = self.canvas.querySelector('.screenshot-wrapper[data-id="' + screenshotId + '"]');
+            var ss = page.getScreenshot(screenshotId);
+            if (el && ss) {
+                items.push({ element: el, screenshot: ss });
+            }
+        }
+        return items;
     }
 
     // --- Rendu ---
@@ -685,14 +805,37 @@ class App {
 
             wrapper.addEventListener('click', function (e) {
                 e.stopPropagation();
+                if (self._wasDragging) {
+                    self._wasDragging = false;
+                    return;
+                }
+                if (self._selectionChangedOnMousedown) {
+                    self._selectionChangedOnMousedown = false;
+                    return;
+                }
                 self._selectScreenshot(screenshot.id, e.shiftKey);
             });
 
             wrapper.addEventListener('mousedown', function (e) {
                 if (e.target.contentEditable === 'true') return;
-                if (screenshot.positioned) {
-                    self.dragManager.startDrag(e, wrapper, screenshot);
+                if (!screenshot.positioned) return;
+
+                self._selectionChangedOnMousedown = false;
+
+                if (!self.selectedScreenshotIds.has(screenshot.id)) {
+                    if (e.shiftKey) {
+                        self.selectedScreenshotIds.add(screenshot.id);
+                        wrapper.classList.add('selected');
+                    } else {
+                        self._deselectAll();
+                        self.selectedScreenshotIds.add(screenshot.id);
+                        wrapper.classList.add('selected');
+                    }
+                    self._selectionChangedOnMousedown = true;
                 }
+
+                var items = self._buildDragItems(screenshot.id);
+                self.dragManager.startDrag(e, items);
             });
 
             if (screenshot.positioned && screenshot.index !== undefined) {
