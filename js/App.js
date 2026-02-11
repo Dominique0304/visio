@@ -82,7 +82,62 @@ class App {
     }
 
     _onContextComment(screenshotId) {
-        // TODO
+        var project = this.projectManager.getActive();
+        if (!project || !screenshotId) return;
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(screenshotId);
+        if (!screenshot) return;
+
+        var self = this;
+        var overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        var dialog = document.createElement('div');
+        dialog.className = 'modal-dialog';
+
+        var title = document.createElement('div');
+        title.className = 'modal-title';
+        title.textContent = 'Commentaire';
+
+        var textarea = document.createElement('textarea');
+        textarea.className = 'modal-textarea';
+        textarea.value = screenshot.comment || '';
+        textarea.placeholder = 'Saisir un commentaire...';
+
+        var btnRow = document.createElement('div');
+        btnRow.className = 'modal-buttons';
+
+        var btnOk = document.createElement('button');
+        btnOk.className = 'modal-btn modal-btn-ok';
+        btnOk.textContent = 'OK';
+        btnOk.addEventListener('click', function () {
+            var newComment = textarea.value.trim();
+            if (newComment !== (screenshot.comment || '')) {
+                self._saveState();
+                screenshot.comment = newComment;
+                project.markModified();
+                self.renderPage();
+                self._updateTabBar();
+            }
+            document.body.removeChild(overlay);
+        });
+
+        var btnCancel = document.createElement('button');
+        btnCancel.className = 'modal-btn modal-btn-cancel';
+        btnCancel.textContent = 'Annuler';
+        btnCancel.addEventListener('click', function () {
+            document.body.removeChild(overlay);
+        });
+
+        btnRow.appendChild(btnOk);
+        btnRow.appendChild(btnCancel);
+        dialog.appendChild(title);
+        dialog.appendChild(textarea);
+        dialog.appendChild(btnRow);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        textarea.focus();
     }
 
     _onContextInsertLink(screenshotId) {
@@ -797,7 +852,10 @@ class App {
         var self = this;
         page.screenshots.forEach(function (screenshot) {
             var wrapper = document.createElement('div');
-            wrapper.className = 'screenshot-wrapper' + (screenshot.positioned ? ' positioned' : '');
+            var cls = 'screenshot-wrapper';
+            if (screenshot.positioned) cls += ' positioned';
+            if (screenshot.comment) cls += ' has-comment';
+            wrapper.className = cls;
             wrapper.dataset.id = screenshot.id;
 
             if (screenshot.positioned) {
