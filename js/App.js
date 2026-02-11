@@ -355,6 +355,51 @@ class App {
         return path;
     }
 
+    _getFileExtension(path) {
+        var clean = path.replace(/[?#].*$/, '');
+        var dot = clean.lastIndexOf('.');
+        if (dot === -1) return '';
+        return clean.substring(dot).toLowerCase();
+    }
+
+    _openWithNativeApp(link) {
+        var fileUrl = this._linkToUrl(link);
+        var ext = this._getFileExtension(link);
+
+        // Protocoles Microsoft Office -> ouverture directe dans l'application
+        var officeProtocols = {
+            '.doc': 'ms-word', '.docx': 'ms-word', '.docm': 'ms-word', '.rtf': 'ms-word',
+            '.xls': 'ms-excel', '.xlsx': 'ms-excel', '.xlsm': 'ms-excel', '.csv': 'ms-excel',
+            '.ppt': 'ms-powerpoint', '.pptx': 'ms-powerpoint', '.pptm': 'ms-powerpoint',
+            '.vsd': 'ms-visio', '.vsdx': 'ms-visio',
+            '.mpp': 'ms-project'
+        };
+
+        if (officeProtocols[ext]) {
+            var protocolUrl = officeProtocols[ext] + ':ofe|u|' + fileUrl;
+            window.location.href = protocolUrl;
+            return;
+        }
+
+        // Pour les URL http/https, ouvrir dans le navigateur
+        if (/^https?:\/\//i.test(link)) {
+            window.open(fileUrl, '_blank');
+            return;
+        }
+
+        // Pour les autres fichiers locaux, copier le chemin et informer l'utilisateur
+        var self = this;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(function () {
+                alert('Le chemin a \u00e9t\u00e9 copi\u00e9 dans le presse-papier :\n\n' + link + '\n\nCollez-le dans l\'Explorateur Windows (Win+E) pour ouvrir le fichier avec son application d\u00e9di\u00e9e.');
+            }).catch(function () {
+                window.open(fileUrl, '_blank');
+            });
+        } else {
+            window.open(fileUrl, '_blank');
+        }
+    }
+
     _onContextShowLink(screenshotId) {
         var project = this.projectManager.getActive();
         if (!project || !screenshotId) return;
@@ -363,8 +408,7 @@ class App {
         if (!screenshot) return;
 
         if (screenshot.link) {
-            var url = this._linkToUrl(screenshot.link);
-            window.open(url, '_blank');
+            this._openWithNativeApp(screenshot.link);
         } else {
             alert('Aucun lien hypertexte d\u00e9fini pour cette image.');
         }
