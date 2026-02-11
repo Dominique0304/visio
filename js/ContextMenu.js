@@ -27,9 +27,10 @@ class ContextMenu {
             div.textContent = item.label;
             div.addEventListener('click', function (e) {
                 e.stopPropagation();
+                var id = self.targetScreenshotId;
                 self.hide();
                 if (self.callbacks[item.action]) {
-                    self.callbacks[item.action](self.targetScreenshotId);
+                    self.callbacks[item.action](id);
                 }
             });
             self.menuEl.appendChild(div);
