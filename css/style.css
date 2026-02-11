@@ -152,6 +152,15 @@ body {
     background-color: #5a8a3a;
 }
 
+.btn-reorganize {
+    background-color: #7a5a8a;
+    border-color: #9a6aaa;
+}
+
+.btn-reorganize:hover {
+    background-color: #9a6aaa;
+}
+
 .toolbar-status {
     padding: 4px 10px;
     background-color: #496a2e;
@@ -286,6 +295,28 @@ body {
 .screenshot-date:focus {
     outline: 1px dashed #2a6496;
     background-color: #eef5ff;
+}
+
+/* ========== Screenshot Index Badge ========== */
+
+.screenshot-index {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    min-width: 22px;
+    height: 22px;
+    background-color: #2a6496;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 2;
+    pointer-events: none;
+    padding: 0 4px;
+    line-height: 1;
 }
 
 /* ========== Canvas Hint ========== */

@@ -14,6 +14,7 @@ class Toolbar {
             { label: 'Enregistrer', action: 'onSave' },
             { label: 'Positionnement', action: 'onPosition', className: 'btn-position' },
             { label: 'Initialiser', action: 'onInitialize', className: 'btn-initialize' },
+            { label: 'R\u00e9organisation', action: 'onReorganize', className: 'btn-reorganize' },
         ];
 
         const btnGroup = document.createElement('div');

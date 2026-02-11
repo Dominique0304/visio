@@ -47,6 +47,7 @@ class App {
             onSave: this.saveProject.bind(this),
             onPosition: this.positionScreenshots.bind(this),
             onInitialize: this.initializeReference.bind(this),
+            onReorganize: this.reorganize.bind(this),
             onHeightChange: this.changeImageHeight.bind(this),
             onZoomChange: this.changeZoom.bind(this)
         });
@@ -342,6 +343,88 @@ class App {
         this._updateTabBar();
     }
 
+    // --- Reorganisation ---
+
+    _computeIndices(screenshots, imageHeight) {
+        var positioned = screenshots.filter(function (s) { return s.positioned; });
+        if (positioned.length === 0) return;
+
+        var sorted = positioned.slice().sort(function (a, b) { return a.y - b.y; });
+        var threshold = imageHeight / 2;
+        var rows = [];
+        var currentRow = [sorted[0]];
+        var rowY = sorted[0].y;
+
+        for (var i = 1; i < sorted.length; i++) {
+            if (sorted[i].y - rowY > threshold) {
+                rows.push(currentRow);
+                currentRow = [sorted[i]];
+                rowY = sorted[i].y;
+            } else {
+                currentRow.push(sorted[i]);
+            }
+        }
+        rows.push(currentRow);
+
+        var index = 1;
+        rows.forEach(function (row) {
+            row.sort(function (a, b) { return a.x - b.x; });
+            row.forEach(function (screenshot) {
+                screenshot.index = index++;
+            });
+        });
+    }
+
+    reorganize() {
+        var project = this.projectManager.getActive();
+        if (!project) return;
+
+        var page = project.getCurrentPage();
+        if (page.screenshots.length === 0) return;
+
+        var margin = this.configManager.getDefault('pageMargin');
+        var pageWidth = this.configManager.getDefault('pageWidth');
+        var maxX = pageWidth - margin;
+        var gap = 10;
+        var dateAreaHeight = 30;
+
+        this._computeIndices(page.screenshots, project.imageHeight);
+
+        page.screenshots.sort(function (a, b) {
+            var ia = a.index || 0;
+            var ib = b.index || 0;
+            return ia - ib;
+        });
+
+        var currentX = margin;
+        var currentY = margin;
+        var rowHeight = 0;
+
+        page.screenshots.forEach(function (screenshot) {
+            screenshot.resize(project.imageHeight);
+            var itemHeight = screenshot.height + dateAreaHeight;
+
+            if (currentX + screenshot.width > maxX && currentX > margin) {
+                currentX = margin;
+                currentY += rowHeight + gap;
+                rowHeight = 0;
+            }
+
+            screenshot.x = currentX;
+            screenshot.y = currentY;
+            screenshot.positioned = true;
+
+            currentX += screenshot.width + gap;
+            rowHeight = Math.max(rowHeight, itemHeight);
+        });
+
+        this._computeIndices(page.screenshots, project.imageHeight);
+
+        project.markModified();
+        this.renderPage();
+        this._updateTabBar();
+    }
+
     // --- Configuration ---
 
     changeImageHeight(height) {
@@ -458,6 +541,8 @@ class App {
             this.canvas.appendChild(hint);
         }
 
+        this._computeIndices(page.screenshots, project.imageHeight);
+
         var self = this;
         page.screenshots.forEach(function (screenshot) {
             var wrapper = document.createElement('div');
@@ -506,6 +591,13 @@ class App {
                     self.dragManager.startDrag(e, wrapper, screenshot);
                 }
             });
+
+            if (screenshot.positioned && screenshot.index !== undefined) {
+                var badge = document.createElement('div');
+                badge.className = 'screenshot-index';
+                badge.textContent = screenshot.index;
+                wrapper.appendChild(badge);
+            }
 
             wrapper.appendChild(img);
             wrapper.appendChild(dateDiv);
