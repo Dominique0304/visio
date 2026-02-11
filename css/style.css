@@ -461,25 +461,32 @@ body {
 }
 
 .modal-dialog {
+    position: absolute;
     background-color: #2d2d2d;
     border: 1px solid #555;
     border-radius: 8px;
-    padding: 20px;
+    padding: 0;
     min-width: 400px;
     max-width: 600px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
-.modal-title {
-    font-size: 16px;
+.modal-titlebar {
+    font-size: 14px;
     font-weight: bold;
     color: #e0e0e0;
-    margin-bottom: 12px;
+    padding: 10px 16px;
+    background-color: #3a3a3a;
+    border-radius: 8px 8px 0 0;
+    cursor: move;
+    user-select: none;
 }
 
 .modal-textarea {
-    width: 100%;
+    display: block;
+    width: calc(100% - 32px);
     min-height: 120px;
+    margin: 16px;
     padding: 10px;
     background-color: #1e1e1e;
     color: #e0e0e0;
@@ -488,7 +495,6 @@ body {
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 13px;
     resize: vertical;
-    margin-bottom: 14px;
 }
 
 .modal-textarea:focus {
@@ -500,6 +506,7 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+    padding: 0 16px 16px;
 }
 
 .modal-btn {

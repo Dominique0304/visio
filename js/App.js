@@ -95,9 +95,35 @@ class App {
         var dialog = document.createElement('div');
         dialog.className = 'modal-dialog';
 
-        var title = document.createElement('div');
-        title.className = 'modal-title';
-        title.textContent = 'Commentaire';
+        var titleBar = document.createElement('div');
+        titleBar.className = 'modal-titlebar';
+        titleBar.textContent = 'Commentaire';
+
+        // Drag de la fenetre via la barre de titre
+        var isDraggingModal = false;
+        var dragOffsetX = 0;
+        var dragOffsetY = 0;
+
+        titleBar.addEventListener('mousedown', function (e) {
+            isDraggingModal = true;
+            var rect = dialog.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function onMove(e) {
+            if (!isDraggingModal) return;
+            dialog.style.left = (e.clientX - dragOffsetX) + 'px';
+            dialog.style.top = (e.clientY - dragOffsetY) + 'px';
+            dialog.style.margin = '0';
+            overlay._onMove = onMove;
+        });
+
+        document.addEventListener('mouseup', function onUp() {
+            isDraggingModal = false;
+            overlay._onUp = onUp;
+        });
 
         var textarea = document.createElement('textarea');
         textarea.className = 'modal-textarea';
@@ -106,6 +132,12 @@ class App {
 
         var btnRow = document.createElement('div');
         btnRow.className = 'modal-buttons';
+
+        var closeModal = function () {
+            document.body.removeChild(overlay);
+            if (overlay._onMove) document.removeEventListener('mousemove', overlay._onMove);
+            if (overlay._onUp) document.removeEventListener('mouseup', overlay._onUp);
+        };
 
         var btnOk = document.createElement('button');
         btnOk.className = 'modal-btn modal-btn-ok';
@@ -119,19 +151,19 @@ class App {
                 self.renderPage();
                 self._updateTabBar();
             }
-            document.body.removeChild(overlay);
+            closeModal();
         });
 
         var btnCancel = document.createElement('button');
         btnCancel.className = 'modal-btn modal-btn-cancel';
         btnCancel.textContent = 'Annuler';
         btnCancel.addEventListener('click', function () {
-            document.body.removeChild(overlay);
+            closeModal();
         });
 
         btnRow.appendChild(btnOk);
         btnRow.appendChild(btnCancel);
-        dialog.appendChild(title);
+        dialog.appendChild(titleBar);
         dialog.appendChild(textarea);
         dialog.appendChild(btnRow);
         overlay.appendChild(dialog);
