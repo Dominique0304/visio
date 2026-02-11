@@ -15,7 +15,7 @@ class App {
         this.workspace = document.getElementById('workspace');
 
         this.viewTransform = { x: 0, y: 0, scale: 0.5 };
-        this.selectedScreenshotId = null;
+        this.selectedScreenshotIds = new Set();
         this.referencePoint = null;
         this.undoStack = [];
         this.redoStack = [];
@@ -89,8 +89,8 @@ class App {
                 e.preventDefault();
                 this.redo();
             }
-            if (e.key === 'Delete' && this.selectedScreenshotId && !isEditing) {
-                this.deleteSelectedScreenshot();
+            if (e.key === 'Delete' && this.selectedScreenshotIds.size > 0 && !isEditing) {
+                this.deleteSelectedScreenshots();
             }
         }.bind(this));
     }
@@ -338,7 +338,7 @@ class App {
         project.markModified();
 
         this.toolbar.updateHeight(project.imageHeight);
-        this.selectedScreenshotId = null;
+        this.selectedScreenshotIds.clear();
         this._updateAll();
     }
 
@@ -346,12 +346,13 @@ class App {
 
     initializeReference() {
         var project = this.projectManager.getActive();
-        if (!project || !this.selectedScreenshotId) {
+        if (!project || this.selectedScreenshotIds.size === 0) {
             alert('Selectionnez une image avant de cliquer sur Initialiser.');
             return;
         }
         var page = project.getCurrentPage();
-        var screenshot = page.getScreenshot(this.selectedScreenshotId);
+        var firstId = this.selectedScreenshotIds.values().next().value;
+        var screenshot = page.getScreenshot(firstId);
         if (!screenshot) return;
 
         var gap = 10;
@@ -367,22 +368,18 @@ class App {
 
     positionScreenshots() {
         var project = this.projectManager.getActive();
-        if (!project || !this.selectedScreenshotId) {
-            alert('Selectionnez une image a positionner.');
+        if (!project || this.selectedScreenshotIds.size === 0) {
+            alert('Selectionnez une ou plusieurs images a positionner.');
             return;
         }
 
         var page = project.getCurrentPage();
-        var screenshot = page.getScreenshot(this.selectedScreenshotId);
-        if (!screenshot) return;
-
         this._saveState();
         var margin = this.configManager.getDefault('pageMargin');
         var pageWidth = this.configManager.getDefault('pageWidth');
         var maxX = pageWidth - margin;
         var gap = 10;
-
-        screenshot.resize(project.imageHeight);
+        var self = this;
 
         if (!this.referencePoint) {
             this.referencePoint = {
@@ -393,21 +390,28 @@ class App {
             };
         }
 
-        if (this.referencePoint.x + screenshot.width > maxX && this.referencePoint.x > this.referencePoint.rowStartX) {
-            this.referencePoint.x = this.referencePoint.rowStartX;
-            this.referencePoint.y += this.referencePoint.rowHeight + gap;
-            this.referencePoint.rowHeight = 0;
-        }
+        this.selectedScreenshotIds.forEach(function (id) {
+            var screenshot = page.getScreenshot(id);
+            if (!screenshot) return;
 
-        screenshot.x = this.referencePoint.x;
-        screenshot.y = this.referencePoint.y;
-        screenshot.positioned = true;
+            screenshot.resize(project.imageHeight);
 
-        this.referencePoint.x += screenshot.width + gap;
-        this.referencePoint.rowHeight = Math.max(
-            this.referencePoint.rowHeight,
-            screenshot.height + 30
-        );
+            if (self.referencePoint.x + screenshot.width > maxX && self.referencePoint.x > self.referencePoint.rowStartX) {
+                self.referencePoint.x = self.referencePoint.rowStartX;
+                self.referencePoint.y += self.referencePoint.rowHeight + gap;
+                self.referencePoint.rowHeight = 0;
+            }
+
+            screenshot.x = self.referencePoint.x;
+            screenshot.y = self.referencePoint.y;
+            screenshot.positioned = true;
+
+            self.referencePoint.x += screenshot.width + gap;
+            self.referencePoint.rowHeight = Math.max(
+                self.referencePoint.rowHeight,
+                screenshot.height + 30
+            );
+        });
 
         project.markModified();
         this.renderPage();
@@ -564,29 +568,44 @@ class App {
 
     // --- Screenshots ---
 
-    deleteSelectedScreenshot() {
+    deleteSelectedScreenshots() {
         var project = this.projectManager.getActive();
-        if (!project || !this.selectedScreenshotId) return;
+        if (!project || this.selectedScreenshotIds.size === 0) return;
         this._saveState();
         var page = project.getCurrentPage();
-        page.removeScreenshot(this.selectedScreenshotId);
-        this.selectedScreenshotId = null;
+        var self = this;
+        this.selectedScreenshotIds.forEach(function (id) {
+            page.removeScreenshot(id);
+        });
+        self.selectedScreenshotIds.clear();
         project.markModified();
         this.renderPage();
         this._updateTabBar();
     }
 
-    _selectScreenshot(id) {
-        this._deselectAll();
-        this.selectedScreenshotId = id;
-        var el = this.canvas.querySelector('.screenshot-wrapper[data-id="' + id + '"]');
-        if (el) el.classList.add('selected');
+    _selectScreenshot(id, shiftKey) {
+        if (shiftKey) {
+            if (this.selectedScreenshotIds.has(id)) {
+                this.selectedScreenshotIds.delete(id);
+                var el = this.canvas.querySelector('.screenshot-wrapper[data-id="' + id + '"]');
+                if (el) el.classList.remove('selected');
+            } else {
+                this.selectedScreenshotIds.add(id);
+                var el = this.canvas.querySelector('.screenshot-wrapper[data-id="' + id + '"]');
+                if (el) el.classList.add('selected');
+            }
+        } else {
+            this._deselectAll();
+            this.selectedScreenshotIds.add(id);
+            var el = this.canvas.querySelector('.screenshot-wrapper[data-id="' + id + '"]');
+            if (el) el.classList.add('selected');
+        }
     }
 
     _deselectAll() {
-        this.selectedScreenshotId = null;
-        var prev = this.canvas.querySelector('.screenshot-wrapper.selected');
-        if (prev) prev.classList.remove('selected');
+        this.selectedScreenshotIds.clear();
+        var allSelected = this.canvas.querySelectorAll('.screenshot-wrapper.selected');
+        allSelected.forEach(function (el) { el.classList.remove('selected'); });
     }
 
     _onDragStart() {
@@ -666,7 +685,7 @@ class App {
 
             wrapper.addEventListener('click', function (e) {
                 e.stopPropagation();
-                self._selectScreenshot(screenshot.id);
+                self._selectScreenshot(screenshot.id, e.shiftKey);
             });
 
             wrapper.addEventListener('mousedown', function (e) {
@@ -681,6 +700,10 @@ class App {
                 badge.className = 'screenshot-index';
                 badge.textContent = screenshot.index;
                 wrapper.appendChild(badge);
+            }
+
+            if (self.selectedScreenshotIds.has(screenshot.id)) {
+                wrapper.classList.add('selected');
             }
 
             wrapper.appendChild(img);
