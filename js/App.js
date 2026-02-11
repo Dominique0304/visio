@@ -218,11 +218,19 @@ class App {
         var inputWrapper = document.createElement('div');
         inputWrapper.style.padding = '16px';
 
+        var label = document.createElement('div');
+        label.className = 'modal-link-label';
+        label.textContent = 'Chemin ou URL du document :';
+        inputWrapper.appendChild(label);
+
+        var inputRow = document.createElement('div');
+        inputRow.className = 'modal-link-row';
+
         var input = document.createElement('input');
         input.type = 'text';
         input.className = 'modal-link-input';
         input.value = screenshot.link || '';
-        input.placeholder = 'https://...';
+        input.placeholder = 'Chemin local, r\u00e9seau (\\\\serveur\\...) ou URL (https://...)';
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -234,7 +242,41 @@ class App {
             }
         });
 
-        inputWrapper.appendChild(input);
+        var btnBrowse = document.createElement('button');
+        btnBrowse.className = 'modal-btn modal-btn-browse';
+        btnBrowse.textContent = 'Parcourir...';
+        btnBrowse.addEventListener('click', function () {
+            if (window.showOpenFilePicker) {
+                window.showOpenFilePicker({ multiple: false }).then(function (handles) {
+                    if (handles && handles.length > 0) {
+                        var handle = handles[0];
+                        input.value = handle.name;
+                        input.focus();
+                    }
+                }).catch(function () {});
+            } else {
+                var fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.style.display = 'none';
+                fileInput.addEventListener('change', function () {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        var filePath = fileInput.value;
+                        if (filePath.indexOf('fakepath') !== -1) {
+                            filePath = fileInput.files[0].name;
+                        }
+                        input.value = filePath;
+                        input.focus();
+                    }
+                    document.body.removeChild(fileInput);
+                });
+                document.body.appendChild(fileInput);
+                fileInput.click();
+            }
+        });
+
+        inputRow.appendChild(input);
+        inputRow.appendChild(btnBrowse);
+        inputWrapper.appendChild(inputRow);
 
         var btnRow = document.createElement('div');
         btnRow.className = 'modal-buttons';

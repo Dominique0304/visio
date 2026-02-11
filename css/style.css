@@ -370,9 +370,20 @@ body {
 
 /* ========== Modal Link Input ========== */
 
+.modal-link-label {
+    font-size: 13px;
+    color: #c0c0c0;
+    margin-bottom: 8px;
+}
+
+.modal-link-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .modal-link-input {
-    display: block;
-    width: 100%;
+    flex: 1;
     padding: 8px 10px;
     background-color: #1e1e1e;
     color: #e0e0e0;
@@ -385,6 +396,17 @@ body {
 .modal-link-input:focus {
     outline: none;
     border-color: #2a94e4;
+}
+
+.modal-btn-browse {
+    background-color: #4a4a4a;
+    color: #e0e0e0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.modal-btn-browse:hover {
+    background-color: #5a5a5a;
 }
 
 /* ========== Selection Rectangle ========== */
