@@ -829,17 +829,21 @@ body {
 
 .toolbox-form-row {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
 }
 
 .toolbox-form-label {
     font-size: 12px;
     color: #aaa;
     font-weight: bold;
+    min-width: 130px;
+    flex-shrink: 0;
 }
 
 .toolbox-form-input {
+    flex: 1;
     padding: 6px 8px;
     background-color: #1e1e1e;
     color: #e0e0e0;
