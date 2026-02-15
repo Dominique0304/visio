@@ -47,8 +47,8 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             try:
-                # Utiliser subprocess au lieu de os.startfile pour plus de fiabilite
-                subprocess.Popen(['cmd', '/c', 'start', '', file_path], shell=False)
+                # explorer.exe ouvre le fichier avec l'app par defaut ET amene la fenetre au premier plan
+                subprocess.Popen(['explorer', file_path])
                 print('[DEBUG] Ouverture lancee: ' + file_path)
                 self.wfile.write(('OK: ' + file_path).encode('utf-8'))
             except Exception as e:
