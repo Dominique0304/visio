@@ -365,7 +365,26 @@ class App {
     _openWithNativeApp(link) {
         var fileUrl = this._linkToUrl(link);
         var ext = this._getFileExtension(link);
+        var self = this;
 
+        // Tenter d'ouvrir via le serveur Python local
+        var serverUrl = 'http://127.0.0.1:8765/open?path=' + encodeURIComponent(link);
+
+        fetch(serverUrl, { mode: 'cors' })
+            .then(function (response) { return response.text(); })
+            .then(function (text) {
+                if (text.indexOf('ERREUR') === 0) {
+                    alert(text);
+                }
+                // Sinon OK, le fichier s'est ouvert
+            })
+            .catch(function () {
+                // Serveur Python non disponible -> fallback
+                self._openWithNativeAppFallback(link, fileUrl, ext);
+            });
+    }
+
+    _openWithNativeAppFallback(link, fileUrl, ext) {
         // Protocoles Microsoft Office -> ouverture directe dans l'application
         var officeProtocols = {
             '.doc': 'ms-word', '.docx': 'ms-word', '.docm': 'ms-word', '.rtf': 'ms-word',
@@ -388,10 +407,9 @@ class App {
         }
 
         // Pour les autres fichiers locaux, copier le chemin et informer l'utilisateur
-        var self = this;
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(link).then(function () {
-                alert('Le chemin a \u00e9t\u00e9 copi\u00e9 dans le presse-papier :\n\n' + link + '\n\nCollez-le dans l\'Explorateur Windows (Win+E) pour ouvrir le fichier avec son application d\u00e9di\u00e9e.');
+                alert('Le serveur local n\'est pas lanc\u00e9.\n\nLe chemin a \u00e9t\u00e9 copi\u00e9 dans le presse-papier :\n' + link + '\n\nPour ouvrir les fichiers directement, lancez l\'application via lancer_visio.bat');
             }).catch(function () {
                 window.open(fileUrl, '_blank');
             });
