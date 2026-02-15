@@ -38,7 +38,8 @@ class ToolboxWindow {
             }
         });
         this.todoText = '';
-        this.odsPath = '';
+        // Charger le chemin ODS depuis localStorage pour ne pas le ressaisir
+        this.odsPath = localStorage.getItem('visio_odsPath') || '';
         this._snapshot = null;
 
         this._buildWindow();
@@ -140,6 +141,7 @@ class ToolboxWindow {
         this.odsInput.value = this.odsPath || '';
         this.odsInput.addEventListener('input', function () {
             self.odsPath = self.odsInput.value;
+            localStorage.setItem('visio_odsPath', self.odsPath);
         });
 
         var odsBrowseBtn = document.createElement('button');
@@ -153,6 +155,7 @@ class ToolboxWindow {
                     if (filePath) {
                         self.odsPath = filePath;
                         self.odsInput.value = filePath;
+                        localStorage.setItem('visio_odsPath', filePath);
                     }
                 })
                 .catch(function () {
