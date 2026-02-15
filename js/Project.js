@@ -1,5 +1,5 @@
 class Project {
-    constructor({ name, pages, imageHeight, modified }) {
+    constructor({ name, pages, imageHeight, modified, toolboxData }) {
         this.name = name || 'Nouveau Projet';
         this.pages = (pages || [{ pageNumber: 1, screenshots: [] }]).map(
             p => p instanceof Page ? p : Page.fromJSON(p)
@@ -8,6 +8,7 @@ class Project {
         this.currentPageIndex = 0;
         this.modified = modified || false;
         this.fileHandle = null;
+        this.toolboxData = toolboxData || null;
     }
 
     getCurrentPage() {
@@ -52,7 +53,8 @@ class Project {
         return {
             name: this.name,
             imageHeight: this.imageHeight,
-            pages: this.pages.map(p => p.toJSON())
+            pages: this.pages.map(p => p.toJSON()),
+            toolboxData: this.toolboxData || null
         };
     }
 

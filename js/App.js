@@ -25,7 +25,7 @@ class App {
         this._initToolbar();
         this._initPageNavigator();
         this._initContextMenu();
-        this.toolboxWindow = new ToolboxWindow();
+        this.toolboxWindow = new ToolboxWindow(this._onToolboxSave.bind(this));
         this._wasDragging = false;
         this._selectionChangedOnMousedown = false;
 
@@ -661,6 +661,9 @@ class App {
         if (project) {
             this.projectManager.addProject(project);
             this.toolbar.updateHeight(project.imageHeight);
+            if (project.toolboxData) {
+                this.toolboxWindow.setData(project.toolboxData);
+            }
             this._updateAll();
             this._centerView();
         }
@@ -669,6 +672,8 @@ class App {
     async saveProject() {
         var project = this.projectManager.getActive();
         if (!project) return;
+        // Sauvegarder les donnees toolbox dans le projet avant enregistrement
+        project.toolboxData = this.toolboxWindow.getData();
         var success = await this.fileManager.saveProject(project);
         if (success) {
             this._updateTabBar();
@@ -749,6 +754,7 @@ class App {
         project.pages = restored.pages;
         project.imageHeight = restored.imageHeight;
         project.name = restored.name;
+        project.toolboxData = restored.toolboxData;
         project.currentPageIndex = Math.min(project.currentPageIndex, project.pages.length - 1);
         project.markModified();
 
@@ -919,7 +925,20 @@ class App {
     // --- Boite a outils ---
 
     toggleToolbox() {
+        // Charger les donnees du projet actif dans la toolbox avant d'afficher
+        var project = this.projectManager.getActive();
+        if (project && project.toolboxData) {
+            this.toolboxWindow.setData(project.toolboxData);
+        }
         this.toolboxWindow.toggle();
+    }
+
+    _onToolboxSave(data) {
+        var project = this.projectManager.getActive();
+        if (!project) return;
+        project.toolboxData = data;
+        project.markModified();
+        this._updateTabBar();
     }
 
     // --- Configuration ---
