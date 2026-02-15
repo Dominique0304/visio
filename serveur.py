@@ -9,6 +9,7 @@ import os
 import sys
 import subprocess
 import ctypes
+import threading
 
 PORT = 8765
 
@@ -26,6 +27,30 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
 
         if parsed.path == '/ping':
             self.wfile.write('OK'.encode('utf-8'))
+
+        elif parsed.path == '/browse':
+            # Ouvrir la boite de dialogue native Windows pour selectionner un fichier
+            result = {'path': ''}
+            def ask_file():
+                import tkinter as tk
+                from tkinter import filedialog
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes('-topmost', True)
+                file_path = filedialog.askopenfilename(
+                    parent=root,
+                    title='S\u00e9lectionner un fichier'
+                )
+                root.destroy()
+                result['path'] = file_path or ''
+
+            # tkinter doit tourner dans un thread separe pour ne pas bloquer
+            t = threading.Thread(target=ask_file)
+            t.start()
+            t.join()
+
+            print('[DEBUG] Browse: [' + result['path'] + ']')
+            self.wfile.write(result['path'].encode('utf-8'))
 
         elif parsed.path == '/open':
             file_path = params.get('path', [''])[0]

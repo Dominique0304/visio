@@ -180,6 +180,38 @@ class App {
         if (!screenshot) return;
 
         var self = this;
+
+        // Essayer d'ouvrir la boite de dialogue native via le serveur Python
+        fetch('http://127.0.0.1:8765/browse', { mode: 'cors' })
+            .then(function (response) { return response.text(); })
+            .then(function (filePath) {
+                filePath = self._cleanLinkPath(filePath);
+                if (filePath) {
+                    // Fichier selectionne -> sauvegarder directement
+                    if (filePath !== (screenshot.link || '')) {
+                        self._saveState();
+                        screenshot.link = filePath;
+                        project.markModified();
+                        self.renderPage();
+                        self._updateTabBar();
+                    }
+                }
+                // Si vide (annule), ne rien faire
+            })
+            .catch(function () {
+                // Serveur non disponible -> fallback modal HTML
+                self._showInsertLinkModal(screenshotId);
+            });
+    }
+
+    _showInsertLinkModal(screenshotId) {
+        var project = this.projectManager.getActive();
+        if (!project || !screenshotId) return;
+        var page = project.getCurrentPage();
+        var screenshot = page.getScreenshot(screenshotId);
+        if (!screenshot) return;
+
+        var self = this;
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
 
