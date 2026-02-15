@@ -939,6 +939,51 @@ class App {
         project.toolboxData = data;
         project.markModified();
         this._updateTabBar();
+
+        // Export vers fichier ODS si le chemin est defini et Projekt Nr. renseigne
+        this._exportToOds(data);
+    }
+
+    _exportToOds(data) {
+        var odsPath = (data.odsPath || '').trim();
+        if (!odsPath) return;
+
+        var infoProjekt = (data.tabData && data.tabData.infoprojekt) || {};
+        var projektNr = (infoProjekt.projektNr || '').trim();
+        if (!projektNr) return;
+
+        // Construire le mapping champs toolbox -> colonnes ODS
+        var columns = {
+            'Projekt Nr.': projektNr,
+            'Projekt Nennung': infoProjekt.projektNennung || '',
+            'SAP-Block Nr.': infoProjekt.sapBlockNr || '',
+            'SAP Geh\u00e4use Nr.': infoProjekt.sapGehauseNr || '',
+            'Angebot Nr.': infoProjekt.angebotNr || '',
+            'To do': data.todoText || ''
+        };
+
+        var body = JSON.stringify({
+            odsPath: odsPath,
+            columns: columns
+        });
+
+        fetch('http://127.0.0.1:8765/export-ods', {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: body
+        })
+        .then(function (response) { return response.text(); })
+        .then(function (result) {
+            if (result === 'OK') {
+                console.log('[ODS] Export r\u00e9ussi');
+            } else {
+                alert('Erreur export ODS :\n' + result);
+            }
+        })
+        .catch(function () {
+            alert('Le serveur local n\'est pas lanc\u00e9.\nLancez l\'application via lancer_visio.bat pour l\'export ODS.');
+        });
     }
 
     // --- Configuration ---

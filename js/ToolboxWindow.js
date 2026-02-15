@@ -38,6 +38,7 @@ class ToolboxWindow {
             }
         });
         this.todoText = '';
+        this.odsPath = '';
         this._snapshot = null;
 
         this._buildWindow();
@@ -119,6 +120,55 @@ class ToolboxWindow {
         var separator2 = document.createElement('div');
         separator2.className = 'toolbox-separator';
         this.windowEl.appendChild(separator2);
+
+        // Champ chemin fichier ODS
+        var odsSection = document.createElement('div');
+        odsSection.className = 'toolbox-ods-section';
+
+        var odsLabel = document.createElement('div');
+        odsLabel.className = 'toolbox-todo-label';
+        odsLabel.textContent = 'Fichier ODS (export)';
+        odsSection.appendChild(odsLabel);
+
+        var odsRow = document.createElement('div');
+        odsRow.className = 'toolbox-ods-row';
+
+        this.odsInput = document.createElement('input');
+        this.odsInput.type = 'text';
+        this.odsInput.className = 'toolbox-ods-input';
+        this.odsInput.placeholder = 'Chemin du fichier .ods...';
+        this.odsInput.value = this.odsPath || '';
+        this.odsInput.addEventListener('input', function () {
+            self.odsPath = self.odsInput.value;
+        });
+
+        var odsBrowseBtn = document.createElement('button');
+        odsBrowseBtn.className = 'toolbox-ods-browse';
+        odsBrowseBtn.textContent = 'Parcourir';
+        odsBrowseBtn.addEventListener('click', function () {
+            fetch('http://127.0.0.1:8765/browse', { mode: 'cors' })
+                .then(function (response) { return response.text(); })
+                .then(function (filePath) {
+                    filePath = filePath.trim();
+                    if (filePath) {
+                        self.odsPath = filePath;
+                        self.odsInput.value = filePath;
+                    }
+                })
+                .catch(function () {
+                    alert('Le serveur local n\'est pas lanc\u00e9.\nLancez l\'application via lancer_visio.bat');
+                });
+        });
+
+        odsRow.appendChild(this.odsInput);
+        odsRow.appendChild(odsBrowseBtn);
+        odsSection.appendChild(odsRow);
+        this.windowEl.appendChild(odsSection);
+
+        // Separateur
+        var separator3 = document.createElement('div');
+        separator3.className = 'toolbox-separator';
+        this.windowEl.appendChild(separator3);
 
         // Boutons OK / Annuler
         var btnRow = document.createElement('div');
@@ -270,7 +320,8 @@ class ToolboxWindow {
     _takeSnapshot() {
         this._snapshot = JSON.stringify({
             tabData: this.tabData,
-            todoText: this.todoText
+            todoText: this.todoText,
+            odsPath: this.odsPath
         });
     }
 
@@ -280,6 +331,8 @@ class ToolboxWindow {
         this.tabData = data.tabData;
         this.todoText = data.todoText;
         this.todoInput.value = this.todoText;
+        this.odsPath = data.odsPath || '';
+        this.odsInput.value = this.odsPath;
         this._snapshot = null;
     }
 
@@ -307,7 +360,8 @@ class ToolboxWindow {
         this._saveCurrentTab();
         return {
             tabData: JSON.parse(JSON.stringify(this.tabData)),
-            todoText: this.todoInput.value
+            todoText: this.todoInput.value,
+            odsPath: this.odsPath || ''
         };
     }
 
@@ -322,6 +376,10 @@ class ToolboxWindow {
         if (data.todoText !== undefined) {
             this.todoText = data.todoText;
             this.todoInput.value = data.todoText;
+        }
+        if (data.odsPath !== undefined) {
+            this.odsPath = data.odsPath;
+            this.odsInput.value = data.odsPath;
         }
         this._switchTab(this.activeTab);
     }

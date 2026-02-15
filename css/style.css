@@ -768,6 +768,47 @@ body {
     border-color: #2a94e4;
 }
 
+.toolbox-ods-section {
+    padding: 10px;
+    flex-shrink: 0;
+}
+
+.toolbox-ods-row {
+    display: flex;
+    gap: 6px;
+}
+
+.toolbox-ods-input {
+    flex: 1;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+}
+
+.toolbox-ods-input:focus {
+    outline: none;
+    border-color: #2a94e4;
+}
+
+.toolbox-ods-browse {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.toolbox-ods-browse:hover {
+    background-color: #4a4a4a;
+}
+
 .toolbox-buttons {
     display: flex;
     justify-content: flex-end;
