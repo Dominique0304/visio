@@ -25,6 +25,7 @@ class App {
         this._initToolbar();
         this._initPageNavigator();
         this._initContextMenu();
+        this.toolboxWindow = new ToolboxWindow();
         this._wasDragging = false;
         this._selectionChangedOnMousedown = false;
 
@@ -58,6 +59,7 @@ class App {
             onReorganize: this.reorganize.bind(this),
             onUndo: this.undo.bind(this),
             onRedo: this.redo.bind(this),
+            onToolbox: this.toggleToolbox.bind(this),
             onHeightChange: this.changeImageHeight.bind(this),
             onZoomChange: this.changeZoom.bind(this)
         });
@@ -912,6 +914,12 @@ class App {
         project.markModified();
         this.renderPage();
         this._updateTabBar();
+    }
+
+    // --- Boite a outils ---
+
+    toggleToolbox() {
+        this.toolboxWindow.toggle();
     }
 
     // --- Configuration ---

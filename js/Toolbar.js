@@ -17,6 +17,7 @@ class Toolbar {
             { label: 'R\u00e9organisation', action: 'onReorganize', className: 'btn-reorganize' },
             { label: 'Annuler', action: 'onUndo', className: 'btn-undo' },
             { label: 'Refaire', action: 'onRedo', className: 'btn-redo' },
+            { label: 'Bo\u00eete \u00e0 outils', action: 'onToolbox', className: 'btn-toolbox' },
         ];
 
         const btnGroup = document.createElement('div');
