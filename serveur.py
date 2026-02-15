@@ -8,6 +8,7 @@ import urllib.parse
 import os
 import sys
 import subprocess
+import ctypes
 
 PORT = 8765
 
@@ -47,8 +48,15 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             try:
-                # explorer.exe ouvre le fichier avec l'app par defaut ET amene la fenetre au premier plan
-                subprocess.Popen(['explorer', file_path])
+                # ShellExecuteW avec SW_SHOWNORMAL (1) pour ouvrir au premier plan
+                result = ctypes.windll.shell32.ShellExecuteW(
+                    None, 'open', file_path, None, None, 1
+                )
+                print('[DEBUG] ShellExecute result: ' + str(result))
+                if result <= 32:
+                    # Fallback avec subprocess si ShellExecute echoue
+                    subprocess.Popen(['cmd', '/c', 'start', '', file_path], shell=False)
+                    print('[DEBUG] Fallback subprocess lance')
                 print('[DEBUG] Ouverture lancee: ' + file_path)
                 self.wfile.write(('OK: ' + file_path).encode('utf-8'))
             except Exception as e:
