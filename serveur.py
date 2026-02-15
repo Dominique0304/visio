@@ -165,8 +165,8 @@ def update_ods_file(file_path, columns_data):
     if table is None:
         return 'ERREUR: aucune table trouvee dans le fichier ODS'
 
-    # Recuperer toutes les lignes
-    rows = table.findall(TABLE + 'table-row')
+    # Recuperer toutes les lignes (y compris celles dans table-header-rows)
+    rows = table.findall('.//' + TABLE + 'table-row')
     if len(rows) < 1:
         return 'ERREUR: le tableau est vide (pas de ligne d\'en-tete)'
 
@@ -234,7 +234,17 @@ def update_ods_file(file_path, columns_data):
                 new_row.append(ods_create_text_cell(columns_data[col_name]))
             else:
                 new_row.append(ods_create_empty_cell())
-        table.append(new_row)
+        # Inserer apres la derniere ligne existante (pas dans table-header-rows)
+        # Chercher les lignes directes de la table ou ajouter a la fin
+        direct_rows = table.findall(TABLE + 'table-row')
+        if direct_rows:
+            # Inserer apres la derniere ligne directe
+            last_row = direct_rows[-1]
+            children = list(table)
+            idx = children.index(last_row)
+            table.insert(idx + 1, new_row)
+        else:
+            table.append(new_row)
 
     # Serialiser le XML modifie
     new_content = ET.tostring(root, encoding='unicode', xml_declaration=True)
@@ -376,7 +386,11 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
             print('[ODS] Export vers: ' + ods_path)
             print('[ODS] Donnees: ' + str(columns))
 
-            result = update_ods_file(ods_path, columns)
+            try:
+                result = update_ods_file(ods_path, columns)
+            except Exception as e:
+                result = 'ERREUR: exception lors de l\'export: ' + str(e)
+                print('[ODS] ' + result)
             self.wfile.write(result.encode('utf-8'))
         else:
             self.wfile.write('ERREUR: endpoint inconnu'.encode('utf-8'))
