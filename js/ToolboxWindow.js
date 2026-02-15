@@ -1,7 +1,8 @@
 class ToolboxWindow {
-    constructor() {
+    constructor(onSave) {
         this.isVisible = false;
         this.activeTab = 'email';
+        this.onSave = onSave || function () {};
         this.tabs = [
             { id: 'email', label: 'Email' },
             { id: 'dokumente', label: 'Dokumente' },
@@ -12,11 +13,32 @@ class ToolboxWindow {
             { id: 'divers', label: 'Divers' },
             { id: 'kommentare', label: 'Kommentare' }
         ];
+
+        // Champs du formulaire Info Projekt
+        this.infoProjektFields = [
+            { id: 'projektNennung', label: 'Projekt Nennung' },
+            { id: 'projektNr', label: 'Projekt Nr.' },
+            { id: 'sapBlockNr', label: 'SAP-Block Nr.' },
+            { id: 'sapGehauseNr', label: 'SAP Geh\u00e4use Nr.' },
+            { id: 'kundenProduktNr', label: 'Kunden Produkt Nr.' },
+            { id: 'angebotNr', label: 'Angebot Nr.' }
+        ];
+
+        // Donnees des onglets
         this.tabData = {};
+        var self = this;
         this.tabs.forEach(function (tab) {
-            this.tabData[tab.id] = '';
-        }.bind(this));
+            if (tab.id === 'infoprojekt') {
+                self.tabData[tab.id] = {};
+                self.infoProjektFields.forEach(function (field) {
+                    self.tabData[tab.id][field.id] = '';
+                });
+            } else {
+                self.tabData[tab.id] = '';
+            }
+        });
         this.todoText = '';
+        this._snapshot = null;
 
         this._buildWindow();
     }
@@ -67,21 +89,12 @@ class ToolboxWindow {
         // Zone de contenu des onglets
         this.contentArea = document.createElement('div');
         this.contentArea.className = 'toolbox-content';
-
-        this.contentTextarea = document.createElement('textarea');
-        this.contentTextarea.className = 'toolbox-textarea';
-        this.contentTextarea.placeholder = 'Saisir du contenu...';
-        this.contentTextarea.addEventListener('input', function () {
-            self.tabData[self.activeTab] = self.contentTextarea.value;
-        });
-
-        this.contentArea.appendChild(this.contentTextarea);
         this.windowEl.appendChild(this.contentArea);
 
         // Separateur
-        var separator = document.createElement('div');
-        separator.className = 'toolbox-separator';
-        this.windowEl.appendChild(separator);
+        var separator1 = document.createElement('div');
+        separator1.className = 'toolbox-separator';
+        this.windowEl.appendChild(separator1);
 
         // Champ Todo
         var todoSection = document.createElement('div');
@@ -101,6 +114,36 @@ class ToolboxWindow {
         todoSection.appendChild(this.todoInput);
 
         this.windowEl.appendChild(todoSection);
+
+        // Separateur
+        var separator2 = document.createElement('div');
+        separator2.className = 'toolbox-separator';
+        this.windowEl.appendChild(separator2);
+
+        // Boutons OK / Annuler
+        var btnRow = document.createElement('div');
+        btnRow.className = 'toolbox-buttons';
+
+        var btnOk = document.createElement('button');
+        btnOk.className = 'modal-btn modal-btn-ok';
+        btnOk.textContent = 'OK';
+        btnOk.addEventListener('click', function () {
+            self._saveCurrentTab();
+            self.onSave(self.getData());
+            self.hide();
+        });
+
+        var btnCancel = document.createElement('button');
+        btnCancel.className = 'modal-btn modal-btn-cancel';
+        btnCancel.textContent = 'Annuler';
+        btnCancel.addEventListener('click', function () {
+            self._restoreSnapshot();
+            self.hide();
+        });
+
+        btnRow.appendChild(btnOk);
+        btnRow.appendChild(btnCancel);
+        this.windowEl.appendChild(btnRow);
 
         document.body.appendChild(this.windowEl);
 
@@ -138,13 +181,38 @@ class ToolboxWindow {
         });
     }
 
+    _saveCurrentTab() {
+        if (this.activeTab === 'infoprojekt') {
+            this._saveInfoProjektFields();
+        } else if (this.contentArea.querySelector('.toolbox-textarea')) {
+            this.tabData[this.activeTab] = this.contentArea.querySelector('.toolbox-textarea').value;
+        }
+    }
+
     _switchTab(tabId) {
-        // Sauvegarder le contenu de l'onglet actuel
-        this.tabData[this.activeTab] = this.contentTextarea.value;
+        var self = this;
+
+        // Sauvegarder l'onglet actuel
+        this._saveCurrentTab();
 
         // Changer d'onglet
         this.activeTab = tabId;
-        this.contentTextarea.value = this.tabData[tabId] || '';
+
+        // Vider la zone de contenu
+        this.contentArea.innerHTML = '';
+
+        if (tabId === 'infoprojekt') {
+            this._buildInfoProjektForm();
+        } else {
+            var textarea = document.createElement('textarea');
+            textarea.className = 'toolbox-textarea';
+            textarea.placeholder = 'Saisir du contenu...';
+            textarea.value = this.tabData[tabId] || '';
+            textarea.addEventListener('input', function () {
+                self.tabData[self.activeTab] = textarea.value;
+            });
+            this.contentArea.appendChild(textarea);
+        }
 
         // Mettre a jour l'apparence des onglets
         var tabBtns = this.tabBar.querySelectorAll('.toolbox-tab');
@@ -157,6 +225,64 @@ class ToolboxWindow {
         });
     }
 
+    _buildInfoProjektForm() {
+        var self = this;
+        var form = document.createElement('div');
+        form.className = 'toolbox-form';
+
+        var data = this.tabData['infoprojekt'] || {};
+
+        this.infoProjektFields.forEach(function (field) {
+            var row = document.createElement('div');
+            row.className = 'toolbox-form-row';
+
+            var label = document.createElement('label');
+            label.className = 'toolbox-form-label';
+            label.textContent = field.label;
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'toolbox-form-input';
+            input.dataset.fieldId = field.id;
+            input.value = data[field.id] || '';
+            input.addEventListener('input', function () {
+                if (!self.tabData['infoprojekt']) self.tabData['infoprojekt'] = {};
+                self.tabData['infoprojekt'][field.id] = input.value;
+            });
+
+            row.appendChild(label);
+            row.appendChild(input);
+            form.appendChild(row);
+        });
+
+        this.contentArea.appendChild(form);
+    }
+
+    _saveInfoProjektFields() {
+        var inputs = this.contentArea.querySelectorAll('.toolbox-form-input');
+        var self = this;
+        if (!this.tabData['infoprojekt']) this.tabData['infoprojekt'] = {};
+        inputs.forEach(function (input) {
+            self.tabData['infoprojekt'][input.dataset.fieldId] = input.value;
+        });
+    }
+
+    _takeSnapshot() {
+        this._snapshot = JSON.stringify({
+            tabData: this.tabData,
+            todoText: this.todoText
+        });
+    }
+
+    _restoreSnapshot() {
+        if (!this._snapshot) return;
+        var data = JSON.parse(this._snapshot);
+        this.tabData = data.tabData;
+        this.todoText = data.todoText;
+        this.todoInput.value = this.todoText;
+        this._snapshot = null;
+    }
+
     toggle() {
         if (this.isVisible) {
             this.hide();
@@ -166,20 +292,21 @@ class ToolboxWindow {
     }
 
     show() {
+        this._takeSnapshot();
+        this._switchTab(this.activeTab);
         this.windowEl.style.display = 'flex';
         this.isVisible = true;
     }
 
     hide() {
-        this.tabData[this.activeTab] = this.contentTextarea.value;
         this.windowEl.style.display = 'none';
         this.isVisible = false;
     }
 
     getData() {
-        this.tabData[this.activeTab] = this.contentTextarea.value;
+        this._saveCurrentTab();
         return {
-            tabData: Object.assign({}, this.tabData),
+            tabData: JSON.parse(JSON.stringify(this.tabData)),
             todoText: this.todoInput.value
         };
     }
@@ -196,6 +323,6 @@ class ToolboxWindow {
             this.todoText = data.todoText;
             this.todoInput.value = data.todoText;
         }
-        this.contentTextarea.value = this.tabData[this.activeTab] || '';
+        this._switchTab(this.activeTab);
     }
 }
