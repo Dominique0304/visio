@@ -32,6 +32,13 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write('ERREUR: chemin vide'.encode('utf-8'))
                 return
 
+            # Nettoyage du chemin: guillemets, espaces, slashes
+            file_path = file_path.strip().strip('"').strip("'").strip()
+            file_path = file_path.replace('/', '\\')
+
+            print('[DEBUG] Chemin recu: [' + file_path + ']')
+            print('[DEBUG] Existe: ' + str(os.path.exists(file_path)))
+
             if not os.path.exists(file_path):
                 self.wfile.write(('ERREUR: fichier introuvable: ' + file_path).encode('utf-8'))
                 return
