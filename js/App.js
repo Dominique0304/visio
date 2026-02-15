@@ -332,11 +332,13 @@ class App {
 
     _cleanLinkPath(rawPath) {
         var path = rawPath.trim();
-        // Retirer les guillemets ajoutés par Windows "Copier en tant que chemin"
+        // Retirer les caracteres de direction Unicode ajoutes par Windows "Copier en tant que chemin"
+        path = path.replace(/[\u202A\u202B\u202C\u202D\u202E\u200E\u200F\u200B\u200C\u200D\uFEFF]/g, '');
+        // Retirer les guillemets
         if (path.length >= 2 && path.charAt(0) === '"' && path.charAt(path.length - 1) === '"') {
             path = path.substring(1, path.length - 1);
         }
-        return path;
+        return path.trim();
     }
 
     _linkToUrl(path) {

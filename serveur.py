@@ -32,8 +32,11 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write('ERREUR: chemin vide'.encode('utf-8'))
                 return
 
-            # Nettoyage du chemin: guillemets, espaces, slashes
+            # Nettoyage du chemin: caracteres invisibles Unicode, guillemets, espaces
             file_path = file_path.strip().strip('"').strip("'").strip()
+            # Supprimer les caracteres de direction Unicode ajoutes par Windows "Copier en tant que chemin"
+            for ch in '\u202a\u202b\u202c\u202d\u202e\u200e\u200f\u200b\u200c\u200d\ufeff':
+                file_path = file_path.replace(ch, '')
             file_path = file_path.replace('/', '\\')
 
             print('[DEBUG] Chemin recu: [' + file_path + ']')
