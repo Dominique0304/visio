@@ -47,7 +47,9 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             try:
-                os.startfile(file_path)
+                # Utiliser subprocess au lieu de os.startfile pour plus de fiabilite
+                subprocess.Popen(['cmd', '/c', 'start', '', file_path], shell=False)
+                print('[DEBUG] Ouverture lancee: ' + file_path)
                 self.wfile.write(('OK: ' + file_path).encode('utf-8'))
             except Exception as e:
                 self.wfile.write(('ERREUR: ' + str(e)).encode('utf-8'))
